@@ -14,14 +14,15 @@
 package main
 
 import (
+	"bitbucket.org/nanobox/na-api"
+	"bitbucket.org/nanobox/na-pulse/plexer"
+	"bitbucket.org/nanobox/na-pulse/poller"
+	"bitbucket.org/nanobox/na-pulse/routes"
+	"bitbucket.org/nanobox/na-pulse/server"
+	"bitbucket.org/nanobox/nanobox-config"
 	"github.com/jcelliott/lumber"
 	"github.com/pagodabox/golang-mist"
-	"github.com/pagodabox/na-api"
-	"github.com/pagodabox/na-pulse/plexer"
-	"github.com/pagodabox/na-pulse/poller"
-	"github.com/pagodabox/na-pulse/routes"
-	"github.com/pagodabox/na-pulse/server"
-	"github.com/pagodabox/nanobox-config"
+	"github.com/shirou/gopsutil"
 	"os"
 	"strings"
 )

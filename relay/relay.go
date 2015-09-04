@@ -14,10 +14,10 @@
 package relay
 
 import (
+	"bitbucket.org/nanobox/na-pulse/collector"
 	"bufio"
 	"errors"
 	"fmt"
-	"github.com/pagodabox/na-pulse/collector"
 	"net"
 	"strings"
 )

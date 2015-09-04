@@ -14,8 +14,8 @@
 package plexer
 
 import (
+	"bitbucket.org/nanobox/na-pulse/server"
 	"errors"
-	"github.com/pagodabox/na-pulse/server"
 )
 
 var (

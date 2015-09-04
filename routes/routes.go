@@ -14,7 +14,7 @@
 package routes
 
 import (
-	"github.com/pagodabox/na-api"
+	"bitbucket.org/nanobox/na-api"
 )
 
 func Init() {
