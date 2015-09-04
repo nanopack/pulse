@@ -115,6 +115,8 @@ func handleConnection(server *Server, conn net.Conn) {
 
 		cmd := split[0]
 		switch cmd {
+		case "ok":
+			// just an ack
 		case "got":
 			stats := strings.Split(split[1], ",")
 			for _, stat := range stats {

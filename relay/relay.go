@@ -74,6 +74,8 @@ func NewRelay(address, id string) (*Relay, error) {
 
 			cmd := split[0]
 			switch cmd {
+			case "ok":
+				// just an ack
 			case "get":
 				if len(split) != 2 {
 					continue
