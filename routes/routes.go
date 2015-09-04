@@ -13,4 +13,10 @@
 //--------------------------------------------------------------------
 package routes
 
-import ()
+import (
+	"github.com/pagodabox/na-api"
+)
+
+func Init() {
+	api.Name = "PULSE"
+}

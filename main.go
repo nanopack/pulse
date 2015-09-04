@@ -17,6 +17,10 @@ import (
 	"github.com/jcelliott/lumber"
 	"github.com/pagodabox/golang-mist"
 	"github.com/pagodabox/na-api"
+	"github.com/pagodabox/na-pulse/plexer"
+	"github.com/pagodabox/na-pulse/poller"
+	"github.com/pagodabox/na-pulse/routes"
+	"github.com/pagodabox/na-pulse/server"
 	"github.com/pagodabox/nanobox-config"
 	"os"
 	"strings"
@@ -29,13 +33,14 @@ func main() {
 	}
 
 	defaults := map[string]string{
-		"collector_listen_addres": "127.0.0.1:1234",
-		"http_listen_address":     "127.0.0.1:8080",
-		"mist_address":            "127.0.0.1:1234",
-		"log_level":               "INFO"}
+		"server_listen_addres": "127.0.0.1:1234",
+		"http_listen_address":  "127.0.0.1:8080",
+		"mist_address":         "127.0.0.1:1234",
+		"log_level":            "INFO",
+	}
 
 	config.Load(defaults, configFile)
-	config := Config.config
+	config := config.Config
 
 	level := lumber.LvlInt(config["log_level"])
 
@@ -47,8 +52,26 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	defer mist.Close()
 
-	collector.Start(config["collector_listen_addres"])
+	plex := plexer.NewPlexer()
 
+	plex.AddObserver("mist", mist.Publish)
+
+	server, err := server.Listen(config["server_listen_address"], plex.Publish)
+	if err != nil {
+		panic(err)
+	}
+	defer server.Close()
+
+	poller := poller.NewPoller(server.Poll)
+	client := poller.NewClient()
+	defer client.Close()
+
+	client.Poll("cpu", 60)
+	client.Poll("ram", 60)
+	client.Poll("disk", 60)
+
+	routes.Init()
 	api.Start(config["http_listen_address"])
 }

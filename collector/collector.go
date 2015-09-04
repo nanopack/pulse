@@ -13,4 +13,75 @@
 //--------------------------------------------------------------------
 package collector
 
-import ()
+import (
+	"time"
+)
+
+type (
+	Stat      func() int
+	Collector interface {
+		Stop()
+		Start()
+		Value() int
+		Flush()
+		SetInterval(time.Duration)
+	}
+
+	gauge struct {
+		stat     Stat
+		current  int
+		done     chan interface{}
+		next     <-chan time.Time
+		interval time.Duration
+	}
+)
+
+func NewCollector(stat Stat) Collector {
+	gauge := &gauge{
+		stat:    stat,
+		current: stat(),
+	}
+
+	return gauge
+}
+
+func (gauge *gauge) Stop() {
+	if gauge.done != nil {
+		close(gauge.done)
+		gauge.done = nil
+	}
+}
+
+func (gauge *gauge) Start() {
+	if gauge.done == nil {
+		gauge.reset()
+		gauge.done = make(chan interface{})
+		go func() {
+			for {
+				select {
+				case <-gauge.done:
+					return
+				case <-gauge.next:
+					gauge.reset()
+					gauge.current = gauge.stat()
+				}
+			}
+		}()
+	}
+}
+
+func (gauge *gauge) reset() {
+	gauge.next = time.After(gauge.interval)
+}
+
+func (gauge *gauge) Value() int {
+	return gauge.current
+}
+
+func (gauge *gauge) Flush() {
+	gauge.current = 0
+}
+
+func (gauge *gauge) SetInterval(interval time.Duration) {
+	gauge.interval = interval
+}
