@@ -14,9 +14,9 @@
 package main
 
 import (
-	"github.com/pagodabox/na-pulse/collector"
-	"github.com/pagodabox/na-pulse/relay"
-	"github.com/pagodabox/na-pulse/server"
+	"bitbucket.org/nanobox/na-pulse/collector"
+	"bitbucket.org/nanobox/na-pulse/relay"
+	"bitbucket.org/nanobox/na-pulse/server"
 	"math/rand"
 	"sync"
 	"testing"

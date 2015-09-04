@@ -19,17 +19,21 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"strconv"
 	"strings"
+	"time"
 )
 
 var (
 	UnableToIdentify = errors.New("unable to identify with pulse")
+	ReservedName     = errors.New("name is reserved")
 )
 
 type (
 	Relay struct {
 		conn       net.Conn
 		collectors map[string]collector.Collector
+		connected  bool
 	}
 )
 
@@ -55,6 +59,7 @@ func NewRelay(address, id string) (*Relay, error) {
 	relay := &Relay{
 		conn:       conn,
 		collectors: make(map[string]collector.Collector, 0),
+		connected:  false,
 	}
 
 	go func() {
@@ -89,6 +94,27 @@ func NewRelay(address, id string) (*Relay, error) {
 					collector.Flush()
 				}
 				conn.Write([]byte("ok\n"))
+			case "override":
+				args := strings.SplitN(split[1], " ", 2)
+				params := strings.Split(args[1], ",")
+				value, err := strconv.Atoi(args[0])
+				if err != nil {
+					conn.Write([]byte("bad argument\n"))
+				}
+				duration := time.Second * time.Duration(value)
+				for _, param := range params {
+					stat := strings.Split(param, ":")
+					collector, ok := relay.collectors[stat[0]]
+					if !ok {
+						continue
+					}
+					value, err = strconv.Atoi(stat[1])
+					if err != nil {
+						conn.Write([]byte("bad argument\n"))
+					}
+					collector.OverrideInterval(time.Duration(value), duration)
+				}
+				conn.Write([]byte("ok\n"))
 			default:
 				conn.Write([]byte("unknown command\n"))
 			}
@@ -99,11 +125,30 @@ func NewRelay(address, id string) (*Relay, error) {
 	return relay, nil
 }
 
-func (relay *Relay) AddCollector(name string, collector collector.Collector) {
+func (relay *Relay) Info() map[string]int {
+	stats := make(map[string]int, 2)
+	stats["_connected"] = 0
+	if relay.connected {
+		stats["_connected"] = 1
+	}
+
+	for name, stat := range relay.collectors {
+		stats[name] = stat.Value()
+	}
+
+	return stats
+}
+
+func (relay *Relay) AddCollector(name string, collector collector.Collector) error {
+	switch {
+	case name == "_connected":
+		return ReservedName
+	}
 	relay.RemoveCollector(name)
 	relay.collectors[name] = collector
 	collector.Start()
 	relay.conn.Write([]byte(fmt.Sprintf("add %v\n", name)))
+	return nil
 }
 
 func (relay *Relay) RemoveCollector(name string) {

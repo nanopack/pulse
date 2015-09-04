@@ -25,6 +25,7 @@ type (
 		Value() int
 		Flush()
 		SetInterval(time.Duration)
+		OverrideInterval(time.Duration, time.Duration)
 	}
 
 	gauge struct {
@@ -32,14 +33,17 @@ type (
 		current  int
 		done     chan interface{}
 		next     <-chan time.Time
+		revert   chan bool
 		interval time.Duration
+		override time.Duration
 	}
 )
 
 func NewCollector(stat Stat) Collector {
 	gauge := &gauge{
-		stat:    stat,
-		current: stat(),
+		stat:     stat,
+		current:  stat(),
+		override: 0,
 	}
 
 	return gauge
@@ -71,7 +75,13 @@ func (gauge *gauge) Start() {
 }
 
 func (gauge *gauge) reset() {
-	gauge.next = time.After(gauge.interval)
+	switch {
+	case gauge.override != 0:
+		gauge.next = time.After(gauge.override)
+	default:
+		gauge.next = time.After(gauge.interval)
+	}
+
 }
 
 func (gauge *gauge) Value() int {
@@ -84,4 +94,20 @@ func (gauge *gauge) Flush() {
 
 func (gauge *gauge) SetInterval(interval time.Duration) {
 	gauge.interval = interval
+}
+
+func (gauge *gauge) OverrideInterval(newInterval time.Duration, howLong time.Duration) {
+	if gauge.override != 0 {
+		close(gauge.revert)
+	}
+	gauge.override = newInterval
+	gauge.revert = make(chan bool)
+	go func() {
+		select {
+		case <-time.After(howLong):
+			gauge.override = 0
+		case <-gauge.revert:
+			return
+		}
+	}()
 }

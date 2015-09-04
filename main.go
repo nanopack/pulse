@@ -19,10 +19,9 @@ import (
 	"bitbucket.org/nanobox/na-pulse/poller"
 	"bitbucket.org/nanobox/na-pulse/routes"
 	"bitbucket.org/nanobox/na-pulse/server"
-	"bitbucket.org/nanobox/nanobox-config"
 	"github.com/jcelliott/lumber"
 	"github.com/pagodabox/golang-mist"
-	"github.com/shirou/gopsutil"
+	"github.com/pagodabox/nanobox-config"
 	"os"
 	"strings"
 )

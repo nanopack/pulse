@@ -14,7 +14,6 @@
 package poller
 
 import (
-	"fmt"
 	"sync/atomic"
 	"time"
 )
@@ -101,7 +100,6 @@ func (poller *Poller) tagsForTime(currentTime time.Time) []string {
 	seconds := currentTime.Unix()
 	for _, client := range poller.clients {
 		for name, interval := range client.tags {
-			fmt.Println("checking client %v: %v -> %v=%v", client.id, name, seconds, interval)
 			if seconds%int64(interval) != 0 {
 				continue
 			}

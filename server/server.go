@@ -19,6 +19,7 @@ import (
 	"io"
 	"net"
 	"strings"
+	"time"
 )
 
 var (
@@ -139,7 +140,26 @@ func handleConnection(server *Server, conn net.Conn) {
 	}
 }
 
+func (server *Server) Override(override map[string]int, duration time.Duration) {
+	tags := make([]string, len(override))
+	pairs := make([]string, len(override))
+	for key, override := range override {
+		tags = append(tags, key)
+		pairs = append(pairs, key+":"+string(override))
+
+	}
+	command := "override " + string(duration) + " " + strings.Join(pairs, ",") + "\n"
+	ids := server.findIds(tags)
+	server.sendAll(command, ids)
+}
+
 func (server *Server) Poll(tags []string) {
+	ids := server.findIds(tags)
+	command := "get " + strings.Join(tags, ",") + "\n"
+	server.sendAll(command, ids)
+}
+
+func (server *Server) findIds(tags []string) []string {
 	ids := make([]string, 0)
 	for id, checkTags := range server.mappings {
 		for _, tag := range tags {
@@ -149,12 +169,14 @@ func (server *Server) Poll(tags []string) {
 			}
 		}
 	}
-	tagList := append([]byte(strings.Join(tags, ",")), '\n')
-	command := append([]byte("get "), tagList...)
+	return ids
+}
+
+func (server *Server) sendAll(command string, ids []string) {
 	for _, id := range ids {
 		connection, ok := server.connections[id]
 		if ok {
-			go connection.Write(command)
+			go connection.Write([]byte(command))
 		}
 	}
 }
