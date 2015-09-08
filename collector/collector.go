@@ -22,7 +22,7 @@ type (
 	Collector interface {
 		Stop()
 		Start()
-		Value() int
+		Values() map[string]int
 		Flush()
 		SetInterval(time.Duration)
 		OverrideInterval(time.Duration, time.Duration)
@@ -84,8 +84,8 @@ func (gauge *gauge) reset() {
 
 }
 
-func (gauge *gauge) Value() int {
-	return gauge.current
+func (gauge *gauge) Values() map[string]int {
+	return map[string]int{"": gauge.current}
 }
 
 func (gauge *gauge) Flush() {

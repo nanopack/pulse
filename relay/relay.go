@@ -59,72 +59,82 @@ func NewRelay(address, id string) (*Relay, error) {
 	relay := &Relay{
 		conn:       conn,
 		collectors: make(map[string]collector.Collector, 0),
-		connected:  false,
+		connected:  true,
 	}
 
-	go func() {
-		for {
-			line, err := r.ReadString('\n')
-			if err != nil {
-				return
-			}
-
-			line = strings.TrimSuffix(line, "\n")
-			split := strings.SplitN(line, " ", 2)
-
-			cmd := split[0]
-			switch cmd {
-			case "ok":
-				// just an ack
-			case "get":
-				if len(split) != 2 {
-					continue
-				}
-				stats := strings.Split(split[1], ",")
-				results := make([]string, 0)
-				for _, stat := range stats {
-					collector, ok := relay.collectors[stat]
-					if !ok {
-						continue
-					}
-					results = append(results, stat+":"+string(collector.Value()))
-				}
-				response := strings.Join(results, ",")
-				conn.Write(append([]byte("got "), append([]byte(response), '\n')...))
-			case "flush":
-				for _, collector := range relay.collectors {
-					collector.Flush()
-				}
-				conn.Write([]byte("ok\n"))
-			case "override":
-				args := strings.SplitN(split[1], " ", 2)
-				params := strings.Split(args[1], ",")
-				value, err := strconv.Atoi(args[0])
-				if err != nil {
-					conn.Write([]byte("bad argument\n"))
-				}
-				duration := time.Second * time.Duration(value)
-				for _, param := range params {
-					stat := strings.Split(param, ":")
-					collector, ok := relay.collectors[stat[0]]
-					if !ok {
-						continue
-					}
-					value, err = strconv.Atoi(stat[1])
-					if err != nil {
-						conn.Write([]byte("bad argument\n"))
-					}
-					collector.OverrideInterval(time.Duration(value), duration)
-				}
-				conn.Write([]byte("ok\n"))
-			default:
-				conn.Write([]byte("unknown command\n"))
-			}
-		}
-
-	}()
+	go relay.runLoop(r)
 
 	return relay, nil
+}
+
+func (relay *Relay) runLoop(reader *bufio.Reader) {
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			return
+		}
+
+		line = strings.TrimSuffix(line, "\n")
+		split := strings.SplitN(line, " ", 2)
+
+		cmd := split[0]
+		switch cmd {
+		case "ok":
+			// just an ack
+		case "get":
+			if len(split) != 2 {
+				continue
+			}
+			stats := strings.Split(split[1], ",")
+			results := make([]string, 0)
+			for _, stat := range stats {
+				collector, ok := relay.collectors[stat]
+				if !ok {
+					continue
+				}
+				for name, value := range collector.Values() {
+					switch {
+					case name == "":
+						results = append(results, stat+":"+string(value))
+					default:
+						results = append(results, stat+"-"+name+":"+string(value))
+					}
+
+				}
+
+			}
+			response := strings.Join(results, ",")
+			relay.conn.Write(append([]byte("got "), append([]byte(response), '\n')...))
+		case "flush":
+			for _, collector := range relay.collectors {
+				collector.Flush()
+			}
+			relay.conn.Write([]byte("ok\n"))
+		case "override":
+			args := strings.SplitN(split[1], " ", 2)
+			params := strings.Split(args[1], ",")
+			value, err := strconv.Atoi(args[0])
+			if err != nil {
+				relay.conn.Write([]byte("bad argument\n"))
+			}
+			duration := time.Second * time.Duration(value)
+			for _, param := range params {
+				stat := strings.Split(param, ":")
+				collector, ok := relay.collectors[stat[0]]
+				if !ok {
+					continue
+				}
+				value, err = strconv.Atoi(stat[1])
+				if err != nil {
+					relay.conn.Write([]byte("bad argument\n"))
+				}
+				collector.OverrideInterval(time.Duration(value), duration)
+			}
+			relay.conn.Write([]byte("ok\n"))
+		default:
+			relay.conn.Write([]byte("unknown command\n"))
+		}
+	}
 }
 
 func (relay *Relay) Info() map[string]int {
@@ -134,8 +144,17 @@ func (relay *Relay) Info() map[string]int {
 		stats["_connected"] = 1
 	}
 
-	for name, stat := range relay.collectors {
-		stats[name] = stat.Value()
+	for collection, stat := range relay.collectors {
+		values := stat.Values()
+		for name, value := range values {
+			switch {
+			case name == "":
+				stats[collection] = value
+			default:
+				stats[collection+"-"+name] = value
+			}
+
+		}
 	}
 
 	return stats
@@ -165,5 +184,6 @@ func (relay *Relay) Close() error {
 	for name := range relay.collectors {
 		relay.RemoveCollector(name)
 	}
+	relay.conn.Write([]byte("close\n"))
 	return relay.conn.Close()
 }

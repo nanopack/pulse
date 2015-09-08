@@ -39,7 +39,7 @@ func TestCollector(test *testing.T) {
 	collect.Start()
 	time.Sleep(time.Millisecond * 100)
 	collect.Stop()
-	assert(test, math.Abs(float64(collect.Value()-50)) < 10, "not a very good random number generator %v", collect.Value())
+	assert(test, math.Abs(float64(collect.Values()[""]-50)) < 10, "not a very good random number generator %v", collect.Values())
 }
 
 func assert(test *testing.T, check bool, fmt string, args ...interface{}) {
