@@ -63,7 +63,7 @@ func TestEndToEnd(test *testing.T) {
 }
 
 func randCollector() collector.Collector {
-	collect := collector.NewCollector(rand.Int)
+	collect := collector.NewGauge(rand.Int)
 	collect.SetInterval(time.Millisecond * 10)
 	return collect
 }

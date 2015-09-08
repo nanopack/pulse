@@ -20,13 +20,13 @@ import (
 	"time"
 )
 
-func TestCollector(test *testing.T) {
+func TestGauge(test *testing.T) {
 	count := 0
 	random := func() int {
 		count++
 		return rand.Int() % 100
 	}
-	collect := NewCollector(random)
+	collect := NewGauge(random)
 
 	collect.Start()
 	collect.SetInterval(time.Millisecond)
@@ -34,7 +34,7 @@ func TestCollector(test *testing.T) {
 	collect.Stop()
 	assert(test, count > 5, "collector was not called enough times %v", count)
 
-	collect = NewCollector(RunningAverage(random, 100))
+	collect = NewGauge(RunningAverage(random, 100))
 	collect.SetInterval(time.Millisecond)
 	collect.Start()
 	time.Sleep(time.Millisecond * 100)

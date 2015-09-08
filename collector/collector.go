@@ -28,89 +28,70 @@ type (
 		OverrideInterval(time.Duration, time.Duration)
 	}
 
-	gauge struct {
-		stat     Stat
-		current  int
+	collector struct {
 		done     chan interface{}
 		next     <-chan time.Time
 		revert   chan bool
 		interval time.Duration
 		override time.Duration
+		collect  func()
 	}
 )
 
-func NewCollector(stat Stat) Collector {
-	gauge := &gauge{
-		stat:     stat,
-		current:  stat(),
-		override: 0,
-	}
-
-	return gauge
+func (collector *collector) SetInterval(interval time.Duration) {
+	collector.interval = interval
+	collector.reset()
 }
 
-func (gauge *gauge) Stop() {
-	if gauge.done != nil {
-		close(gauge.done)
-		gauge.done = nil
+func (collector *collector) OverrideInterval(newInterval time.Duration, howLong time.Duration) {
+	if collector.override != 0 {
+		close(collector.revert)
+	}
+	collector.override = newInterval
+	collector.revert = make(chan bool)
+	collector.reset()
+	go func() {
+		select {
+		case <-time.After(howLong):
+			collector.override = 0
+			collector.reset()
+		case <-collector.revert:
+			return
+		}
+	}()
+}
+
+func (collector *collector) reset() {
+	switch {
+	case collector.override != 0:
+		collector.next = time.After(collector.override)
+	default:
+		collector.next = time.After(collector.interval)
+	}
+
+}
+
+func (collector *collector) Stop() {
+	if collector.done != nil {
+		close(collector.done)
+		collector.done = nil
 	}
 }
 
-func (gauge *gauge) Start() {
-	if gauge.done == nil {
-		gauge.reset()
-		gauge.done = make(chan interface{})
+func (collector *collector) Start() {
+	if collector.done == nil {
+		collector.reset()
+		collector.done = make(chan interface{})
 		go func() {
 			for {
 				select {
-				case <-gauge.done:
+				case <-collector.done:
 					return
-				case <-gauge.next:
-					gauge.reset()
-					gauge.current = gauge.stat()
+				case <-collector.next:
+					collector.reset()
+					collector.collect()
 				}
 			}
 		}()
 	}
-}
-
-func (gauge *gauge) reset() {
-	switch {
-	case gauge.override != 0:
-		gauge.next = time.After(gauge.override)
-	default:
-		gauge.next = time.After(gauge.interval)
-	}
-
-}
-
-func (gauge *gauge) Values() map[string]int {
-	return map[string]int{"": gauge.current}
-}
-
-func (gauge *gauge) Flush() {
-	gauge.current = 0
-}
-
-func (gauge *gauge) SetInterval(interval time.Duration) {
-	gauge.interval = interval
-	gauge.reset()
-}
-
-func (gauge *gauge) OverrideInterval(newInterval time.Duration, howLong time.Duration) {
-	if gauge.override != 0 {
-		close(gauge.revert)
-	}
-	gauge.override = newInterval
-	gauge.revert = make(chan bool)
-	gauge.reset()
-	go func() {
-		select {
-		case <-time.After(howLong):
-			gauge.override = 0
-			gauge.reset()
-		case <-gauge.revert:
-			return
-		}
-	}()
 }
