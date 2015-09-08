@@ -94,6 +94,7 @@ func (gauge *gauge) Flush() {
 
 func (gauge *gauge) SetInterval(interval time.Duration) {
 	gauge.interval = interval
+	gauge.reset()
 }
 
 func (gauge *gauge) OverrideInterval(newInterval time.Duration, howLong time.Duration) {
@@ -102,10 +103,12 @@ func (gauge *gauge) OverrideInterval(newInterval time.Duration, howLong time.Dur
 	}
 	gauge.override = newInterval
 	gauge.revert = make(chan bool)
+	gauge.reset()
 	go func() {
 		select {
 		case <-time.After(howLong):
 			gauge.override = 0
+			gauge.reset()
 		case <-gauge.revert:
 			return
 		}
