@@ -19,11 +19,13 @@ import (
 	"bitbucket.org/nanobox/na-pulse/poller"
 	"bitbucket.org/nanobox/na-pulse/routes"
 	"bitbucket.org/nanobox/na-pulse/server"
+	"fmt"
 	"github.com/jcelliott/lumber"
 	"github.com/pagodabox/golang-mist"
 	"github.com/pagodabox/nanobox-config"
 	"os"
 	"strings"
+	"time"
 )
 
 func main() {
@@ -64,6 +66,12 @@ func main() {
 	}
 	defer server.Close()
 
+	influx, err := server.StartInfluxd()
+	if err != nil {
+		panic(err)
+	}
+	defer influx.Close()
+
 	poller := poller.NewPoller(server.Poll)
 	client := poller.NewClient()
 	defer client.Close()
@@ -73,5 +81,22 @@ func main() {
 	client.Poll("disk", 60)
 
 	routes.Init()
+
+	time.Sleep(time.Second * 2)
+
+	resChan, err := server.Query("CREATE DATABASE statistics")
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(<-resChan)
+
+	resChan, err = server.Query("CREATE RETENTION POLICY yearSingle ON statistics DURATION 365d REPLICATION 1 DEFAULT")
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(<-resChan)
+
+	plex.AddBatcher("influx", server.InfluxInsert)
+
 	api.Start(config["http_listen_address"])
 }

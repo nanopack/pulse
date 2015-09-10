@@ -26,12 +26,12 @@ func TestPlex(test *testing.T) {
 		return nil
 	})
 
-	plex.Publish([]string{"what"}, "data")
-	plex.Publish([]string{"what"}, "data")
+	plex.PublishSingle([]string{"cpu_used"}, "6")
+	plex.PublishSingle([]string{"cpu_used"}, "6")
 	time.Sleep(time.Millisecond * 10)
 	assert(test, count == 2, "publisher was called an incorrect number of times")
 	plex.RemoveObserver("test")
-	plex.Publish([]string{"what"}, "data")
+	plex.PublishSingle([]string{"cpu_used"}, "6")
 	time.Sleep(time.Millisecond * 10)
 	assert(test, count == 2, "publisher was called an incorrect number of times")
 }

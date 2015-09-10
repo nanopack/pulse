@@ -15,6 +15,7 @@ package main
 
 import (
 	"bitbucket.org/nanobox/na-pulse/collector"
+	"bitbucket.org/nanobox/na-pulse/plexer"
 	"bitbucket.org/nanobox/na-pulse/relay"
 	"bitbucket.org/nanobox/na-pulse/server"
 	"math/rand"
@@ -27,8 +28,8 @@ var address = "127.0.0.1:1234"
 
 func TestEndToEnd(test *testing.T) {
 	wait := sync.WaitGroup{}
-	server, err := server.Listen(address, func(tags []string, data string) error {
-		wait.Done()
+	server, err := server.Listen(address, func(messages plexer.MessageSet) error {
+		wait.Add(-len(messages.Messages))
 		return nil
 	})
 

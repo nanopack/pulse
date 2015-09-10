@@ -14,8 +14,10 @@
 package server
 
 import (
+	"bitbucket.org/nanobox/na-pulse/plexer"
 	"bufio"
 	"errors"
+	"github.com/influxdb/influxdb/cmd/influxd/run"
 	"io"
 	"net"
 	"strings"
@@ -27,8 +29,9 @@ var (
 )
 
 type (
-	Publisher func(tags []string, data string) error
+	Publisher func(plexer.MessageSet) error
 	Server    struct {
+		Influx *run.Server
 		// I need a map that stores which client has which data points available
 		publish     Publisher
 		conn        io.Closer
@@ -119,13 +122,26 @@ func handleConnection(server *Server, conn net.Conn) {
 			// just an ack
 		case "got":
 			stats := strings.Split(split[1], ",")
+
+			metric := plexer.MessageSet{
+				Tags:     []string{"type:metrics", "host:" + id}, // TODO host tag may not be right
+				Messages: make([]plexer.Message, 0),
+			}
+
 			for _, stat := range stats {
 				splitStat := strings.Split(stat, ":")
 				if len(splitStat) != 2 {
 					return
 				}
-				server.publish([]string{"stat", id, splitStat[0]}, splitStat[1])
+
+				message := plexer.Message{
+					Tags: splitStat[:0],
+					Data: splitStat[1],
+				}
+
+				metric.Messages = append(metric.Messages, message)
 			}
+			server.publish(metric)
 		case "add":
 			// record that the remote has a stat available
 			server.mappings[id][split[1]] = true
