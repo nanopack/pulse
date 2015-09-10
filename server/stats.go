@@ -20,6 +20,7 @@ import (
 	"github.com/influxdb/influxdb/influxql"
 	"github.com/influxdb/influxdb/tsdb"
 	"io"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -37,7 +38,8 @@ func (server *Server) StartInfluxd() (io.Closer, error) {
 	}
 
 	server.Influx = influx
-
+	// wait for it to set it self up.
+	time.Sleep(time.Second * 2)
 	return influx, nil
 }
 
@@ -46,7 +48,7 @@ func (server *Server) Query(sql string) (<-chan *influxql.Result, error) {
 	if err != nil {
 		return nil, err
 	}
-	return server.Influx.QueryExecutor.ExecuteQuery(query, "testing", 1024)
+	return server.Influx.QueryExecutor.ExecuteQuery(query, "statistics", 1024)
 }
 
 func (server *Server) WritePoints(database, retain string, points []tsdb.Point) error {
@@ -73,9 +75,13 @@ func (server *Server) InfluxInsert(messages plexer.MessageSet) error {
 	fields := make(tsdb.Fields, len(messages.Messages))
 	for _, message := range messages.Messages {
 		metricId := message.Tags[0]
-		fields[metricId] = message.Data
+		value, err := strconv.ParseFloat(message.Data, 64)
+		if err != nil {
+			value = -1
+		}
+		fields[metricId] = value
 	}
-	point := tsdb.NewPoint("metrics.zone", tags, fields, time.Now())
-	err := server.WritePoints("statistics", "yearSingle", []tsdb.Point{point})
+	point := tsdb.NewPoint("metrics", tags, fields, time.Now())
+	err := server.WritePoints("statistics", "2.days", []tsdb.Point{point})
 	return err
 }

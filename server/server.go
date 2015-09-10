@@ -124,7 +124,7 @@ func handleConnection(server *Server, conn net.Conn) {
 			stats := strings.Split(split[1], ",")
 
 			metric := plexer.MessageSet{
-				Tags:     []string{"type:metrics", "host:" + id}, // TODO host tag may not be right
+				Tags:     []string{"type:metrics", "service:" + id}, // TODO host tag may not be right
 				Messages: make([]plexer.Message, 0),
 			}
 
@@ -135,7 +135,7 @@ func handleConnection(server *Server, conn net.Conn) {
 				}
 
 				message := plexer.Message{
-					Tags: splitStat[:0],
+					Tags: splitStat[:1],
 					Data: splitStat[1],
 				}
 

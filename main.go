@@ -19,13 +19,11 @@ import (
 	"bitbucket.org/nanobox/na-pulse/poller"
 	"bitbucket.org/nanobox/na-pulse/routes"
 	"bitbucket.org/nanobox/na-pulse/server"
-	"fmt"
 	"github.com/jcelliott/lumber"
 	"github.com/pagodabox/golang-mist"
 	"github.com/pagodabox/nanobox-config"
 	"os"
 	"strings"
-	"time"
 )
 
 func main() {
@@ -35,10 +33,10 @@ func main() {
 	}
 
 	defaults := map[string]string{
-		"server_listen_addres": "127.0.0.1:1234",
-		"http_listen_address":  "127.0.0.1:8080",
-		"mist_address":         "127.0.0.1:1234",
-		"log_level":            "INFO",
+		"server_listen_address": "127.0.0.1:3000",
+		"http_listen_address":   "127.0.0.1:8080",
+		"mist_address":          "127.0.0.1:1234",
+		"log_level":             "INFO",
 	}
 
 	config.Load(defaults, configFile)
@@ -80,21 +78,25 @@ func main() {
 	client.Poll("ram", 60)
 	client.Poll("disk", 60)
 
+	api.Name = "PULSE"
+	api.User = server
 	routes.Init()
 
-	time.Sleep(time.Second * 2)
-
-	resChan, err := server.Query("CREATE DATABASE statistics")
-	if err != nil {
-		panic(err)
+	queries := []string{
+		"CREATE DATABASE statistics",
+		`CREATE RETENTION POLICY "2.days" ON statistics DURATION 2d REPLICATION 1 DEFAULT`,
+		`CREATE RETENTION POLICY "1.week" ON statistics DURATION 1w REPLICATION 1 DEFAULT`,
+		`CREATE CONTINUOUS QUERY "15minute_compile" ON statistics BEGIN select mean(cpu_used) as cpu_used, mean(ram_used) as ram_used, mean(swap_used) as swap_used, mean(disk_used) as disk_used, mean(disk_io_read) as disk_io_read, mean(disk_io_write) as disk_io_write, mean(disk_io_busy) as disk_io_busy, mean(disk_io_wait) as disk_io_wait into "1.week"."metrics" from "2.days"."metrics" group by time(15m), service END`,
 	}
-	fmt.Println(<-resChan)
 
-	resChan, err = server.Query("CREATE RETENTION POLICY yearSingle ON statistics DURATION 365d REPLICATION 1 DEFAULT")
-	if err != nil {
-		panic(err)
+	for _, query := range queries {
+		resChan, err := server.Query(query)
+		if err != nil {
+			panic(err)
+		}
+		// probably should validate this return
+		<-resChan
 	}
-	fmt.Println(<-resChan)
 
 	plex.AddBatcher("influx", server.InfluxInsert)
 

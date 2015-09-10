@@ -15,8 +15,36 @@ package routes
 
 import (
 	"bitbucket.org/nanobox/na-api"
+	"bitbucket.org/nanobox/na-pulse/server"
+	"encoding/json"
+	"fmt"
+	"net/http"
 )
 
 func Init() {
-	api.Name = "PULSE"
+	api.Router.Get("/services/{service}/stats/{stat}/hourly", api.TraceRequest(statRequest))
+	api.Router.Get("/services/{service}/stats/{stat}/daily_peaks", api.TraceRequest(combinedRequest))
+}
+
+func statRequest(res http.ResponseWriter, req *http.Request) {
+	server := api.User.(*server.Server)
+	service := req.URL.Query().Get(":service")
+	stat := req.URL.Query().Get(":stat")
+	query := fmt.Sprintf(`select "%v" from "1.week".metrics where service = '%v'`, stat, service)
+	fmt.Println(query)
+	records, err := server.Query(query)
+	if err != nil {
+
+		return
+	}
+
+	bytes, err := json.Marshal(<-records)
+	if err != nil {
+
+	}
+	res.Write(bytes)
+}
+
+func combinedRequest(res http.ResponseWriter, req *http.Request) {
+
 }
