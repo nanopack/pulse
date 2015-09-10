@@ -74,9 +74,20 @@ func main() {
 	client := poller.NewClient()
 	defer client.Close()
 
-	client.Poll("cpu", 60)
-	client.Poll("ram", 60)
-	client.Poll("disk", 60)
+	polling_intervals := map[string]uint{
+		"cpu_used":      60,
+		"ram_used":      60,
+		"swap_used":     60,
+		"disk_used":     60,
+		"disk_io_read":  60,
+		"disk_io_write": 60,
+		"disk_io_busy":  60,
+		"disk_io_wait":  60,
+	}
+
+	for name, interval := range polling_intervals {
+		client.Poll(name, interval)
+	}
 
 	api.Name = "PULSE"
 	api.User = server
