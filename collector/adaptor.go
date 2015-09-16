@@ -17,38 +17,38 @@ import (
 	"math"
 )
 
-func MutedAverage(stat Stat, amount int) Stat {
-	current := 0
-	return func() int {
-		current += stat() / amount
+func MutedAverage(point DataPoint, amount float64) DataPoint {
+	current := float64(0)
+	return func() float64 {
+		current += point() / amount
 		return current
 	}
 }
 
-func Average(stat Stat) Stat {
-	count := 0
-	current := 0
-	return func() int {
+func Average(point DataPoint) DataPoint {
+	count := float64(0)
+	current := float64(0)
+	return func() float64 {
 		// has to be a better way to do this
-		current = (current*count + stat()) / (count + 1)
+		current = (current*count + point()) / (count + 1)
 		count++
 		return current
 	}
 }
 
-func RunningAverage(stat Stat, length int) Stat {
-	values := make([]int, length)
+func RunningAverage(point DataPoint, length int) DataPoint {
+	values := make([]float64, length)
 	idx := 0
-	return func() int {
-		values[idx%length] = stat()
+	return func() float64 {
+		values[idx%length] = point()
 		idx++
-		count := 0
-		value := 0
+		count := float64(0)
+		value := float64(0)
 		for _, val := range values {
 			value += val
 			count++
 		}
-		count = int(math.Min(float64(count), float64(idx)))
+		count = float64(math.Min(count, float64(idx)))
 		if count == 0 {
 			return 0
 		}

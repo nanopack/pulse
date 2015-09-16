@@ -14,26 +14,27 @@
 package collector
 
 type (
-	gauge struct {
-		collector
+	DataPoint func() float64
+	gauge     struct {
+		Collect
 
-		stat    Stat
-		current int
+		stat    DataPoint
+		current float64
 	}
 )
 
-func NewGauge(stat Stat) Collector {
+func NewPointCollector(stat DataPoint) Collector {
 	gauge := &gauge{
 		stat: stat,
 	}
 	gauge.collectValue()
-	gauge.collect = gauge.collectValue
+	gauge.CollectFun = gauge.collectValue
 
 	return gauge
 }
 
-func (gauge *gauge) Values() map[string]int {
-	return map[string]int{"": gauge.current}
+func (gauge *gauge) Values() map[string]float64 {
+	return map[string]float64{"": gauge.current}
 }
 
 func (gauge *gauge) Flush() {

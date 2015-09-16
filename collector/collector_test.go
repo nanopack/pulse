@@ -22,11 +22,11 @@ import (
 
 func TestGauge(test *testing.T) {
 	count := 0
-	random := func() int {
+	random := func() float64 {
 		count++
-		return rand.Int() % 100
+		return float64(rand.Int() % 100)
 	}
-	collect := NewGauge(random)
+	collect := NewPointCollector(random)
 
 	collect.Start()
 	collect.SetInterval(time.Millisecond)
@@ -34,12 +34,12 @@ func TestGauge(test *testing.T) {
 	collect.Stop()
 	assert(test, count > 5, "collector was not called enough times %v", count)
 
-	collect = NewGauge(RunningAverage(random, 100))
+	collect = NewPointCollector(RunningAverage(random, 100))
 	collect.SetInterval(time.Millisecond)
 	collect.Start()
 	time.Sleep(time.Millisecond * 100)
 	collect.Stop()
-	assert(test, math.Abs(float64(collect.Values()[""]-50)) < 10, "not a very good random number generator %v", collect.Values())
+	assert(test, math.Abs(collect.Values()[""]-50) < 10, "not a very good random number generator %v", collect.Values())
 }
 
 func assert(test *testing.T, check bool, fmt string, args ...interface{}) {

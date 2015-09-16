@@ -93,11 +93,12 @@ func (relay *Relay) runLoop(reader *bufio.Reader) {
 					continue
 				}
 				for name, value := range collector.Values() {
+					formatted := strconv.FormatFloat(value, 'f', 4, 64)
 					switch {
 					case name == "":
-						results = append(results, stat+":"+string(value))
+						results = append(results, stat+":"+formatted)
 					default:
-						results = append(results, stat+"-"+name+":"+string(value))
+						results = append(results, stat+"-"+name+":"+formatted)
 					}
 
 				}
@@ -137,8 +138,8 @@ func (relay *Relay) runLoop(reader *bufio.Reader) {
 	}
 }
 
-func (relay *Relay) Info() map[string]int {
-	stats := make(map[string]int, 2)
+func (relay *Relay) Info() map[string]float64 {
+	stats := make(map[string]float64, 2)
 	stats["_connected"] = 0
 	if relay.connected {
 		stats["_connected"] = 1

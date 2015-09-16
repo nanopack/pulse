@@ -14,33 +14,33 @@
 package collector
 
 type (
-	Collection func() map[string]int
-	collection struct {
-		collector
+	DataSet func() map[string]float64
+	set     struct {
+		Collect
 
-		collection Collection
-		current    map[string]int
+		set     DataSet
+		current map[string]float64
 	}
 )
 
-func NewCollection(stats Collection) Collector {
-	collection := &collection{
-		collection: stats,
+func NewSetCollector(stats DataSet) Collector {
+	set := &set{
+		set: stats,
 	}
-	collection.collectValue()
-	collection.collect = collection.collectValue
+	set.collectValue()
+	set.CollectFun = set.collectValue
 
-	return collection
+	return set
 }
 
-func (collection *collection) Values() map[string]int {
-	return collection.current
+func (set *set) Values() map[string]float64 {
+	return set.current
 }
 
-func (collection *collection) Flush() {
-	collection.current = make(map[string]int, 0)
+func (set *set) Flush() {
+	set.current = make(map[string]float64, 0)
 }
 
-func (collection *collection) collectValue() {
-	collection.current = collection.collection()
+func (set *set) collectValue() {
+	set.current = set.set()
 }
