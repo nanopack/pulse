@@ -1,7 +1,11 @@
-# Nanobox Pulse
+# Pulse
 
 Pulse is a stat collecting and publishing service. It serves historical stats over an http api, and live stats are sent to mist for live updates.
 
+
+## Status
+
+Complete/Experimental
 
 ## Relay
 
@@ -35,4 +39,4 @@ The TCP api used to communicate between the pulse server and a relay is simple a
 
 ## Notes
 - If an override is specified for a stat, and a new machine comes online and connects, that override is **NOT** honored.
-- Pulse server does not actively connect to servers to have stats pushed to it, rather, it waits for stat collecting machines to conenct and then requests certain stats on specific intervals.
+- Pulse server does not actively connect to servers to have stats pushed to it, rather, it waits for stat collecting machines to connect and then requests certain stats on specific intervals.
