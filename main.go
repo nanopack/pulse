@@ -1,25 +1,12 @@
-// -*- mode: go; tab-width: 2; indent-tabs-mode: 1; st-rulers: [70] -*-
-// vim: ts=4 sw=4 ft=lua noet
-//--------------------------------------------------------------------
-// @author Daniel Barney <daniel@nanobox.io>
-// Copyright (C) Pagoda Box, Inc - All Rights Reserved
-// Unauthorized copying of this file, via any medium is strictly
-// prohibited. Proprietary and confidential
-//
-// @doc
-//
-// @end
-// Created :   31 August 2015 by Daniel Barney <daniel@nanobox.io>
-//--------------------------------------------------------------------
 package main
 
 import (
 	"bitbucket.org/nanobox/na-api"
-	"bitbucket.org/nanobox/na-pulse/plexer"
-	"bitbucket.org/nanobox/na-pulse/poller"
-	"bitbucket.org/nanobox/na-pulse/routes"
-	"bitbucket.org/nanobox/na-pulse/server"
 	"github.com/jcelliott/lumber"
+	"github.com/nanopack/pulse/plexer"
+	"github.com/nanopack/pulse/poller"
+	"github.com/nanopack/pulse/routes"
+	"github.com/nanopack/pulse/server"
 	"github.com/pagodabox/golang-mist"
 	"github.com/pagodabox/nanobox-config"
 	"os"
