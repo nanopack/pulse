@@ -1,8 +1,8 @@
 package main
 
 import (
-	"bitbucket.org/nanobox/na-api"
 	"github.com/jcelliott/lumber"
+	"github.com/nanobox-io/nanobox-api"
 	"github.com/nanopack/pulse/plexer"
 	"github.com/nanopack/pulse/poller"
 	"github.com/nanopack/pulse/routes"

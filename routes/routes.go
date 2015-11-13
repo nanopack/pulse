@@ -1,10 +1,10 @@
 package routes
 
 import (
-	"bitbucket.org/nanobox/na-api"
 	"encoding/json"
 	"fmt"
 	"github.com/influxdb/influxdb/influxql"
+	"github.com/nanobox-io/nanobox-api"
 	"github.com/nanopack/pulse/server"
 	"math"
 	"net/http"
