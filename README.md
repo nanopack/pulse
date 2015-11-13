@@ -1,7 +1,9 @@
+[![pulse logo](http://nano-assets.gopagoda.io/readme-headers/pulse.png)](http://nanobox.io/open-source#pulse)
+ [![Build Status](https://travis-ci.org/nanopack/pulse.svg)](https://travis-ci.org/nanopack/pulse)
+
 # Pulse
 
 Pulse is a stat collecting and publishing service. It serves historical stats over an http api, and live stats are sent to mist for live updates.
-
 
 ## Status
 
@@ -40,3 +42,13 @@ The TCP api used to communicate between the pulse server and a relay is simple a
 ## Notes
 - If an override is specified for a stat, and a new machine comes online and connects, that override is **NOT** honored.
 - Pulse server does not actively connect to servers to have stats pushed to it, rather, it waits for stat collecting machines to connect and then requests certain stats on specific intervals.
+
+### Contributing
+
+Contributions to the pulse project are welcome and encouraged. Pulse is a [Nanobox](https://nanobox.io) project and contributions should follow the [Nanobox Contribution Process & Guidelines](https://docs.nanobox.io/contributing/).
+
+### Licence
+
+Mozilla Public License Version 2.0
+
+[![open source](http://nano-assets.gopagoda.io/open-src/nanobox-open-src.png)](http://nanobox.io/open-source)
