@@ -4,7 +4,7 @@ import (
 	"github.com/influxdb/influxdb/cluster"
 	"github.com/influxdb/influxdb/cmd/influxd/run"
 	"github.com/influxdb/influxdb/influxql"
-	"github.com/influxdb/influxdb/tsdb"
+	"github.com/influxdb/influxdb/models"
 	"github.com/nanopack/pulse/plexer"
 	"io"
 	"strconv"
@@ -14,7 +14,19 @@ import (
 
 func (server *Server) StartInfluxd() (io.Closer, error) {
 	config, err := run.NewDemoConfig()
-	influx, err := run.NewServer(config, "embedded v0.9.3")
+	type BuildInfo struct {
+		Version string
+		Commit  string
+		Branch  string
+		Time    string
+	}
+	build := run.BuildInfo{
+		Version: "v0.9.3",
+		Commit:  "sha hash",
+		Branch:  "master",
+		Time:    "now",
+	}
+	influx, err := run.NewServer(config, &build)
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +50,7 @@ func (server *Server) Query(sql string) (<-chan *influxql.Result, error) {
 	return server.Influx.QueryExecutor.ExecuteQuery(query, "statistics", 1024)
 }
 
-func (server *Server) WritePoints(database, retain string, points []tsdb.Point) error {
+func (server *Server) WritePoints(database, retain string, points []models.Point) error {
 	pointsRequest := &cluster.WritePointsRequest{
 		Database:         database,
 		RetentionPolicy:  retain,
@@ -49,7 +61,7 @@ func (server *Server) WritePoints(database, retain string, points []tsdb.Point) 
 }
 
 func (server *Server) InfluxInsert(messages plexer.MessageSet) error {
-	tags := make(tsdb.Tags, 0)
+	tags := make(models.Tags, 0)
 	for _, tag := range messages.Tags {
 		elems := strings.SplitN(tag, ":", 2)
 		if len(elems) < 2 {
@@ -59,7 +71,7 @@ func (server *Server) InfluxInsert(messages plexer.MessageSet) error {
 		tags[elems[0]] = elems[1]
 	}
 
-	fields := make(tsdb.Fields, len(messages.Messages))
+	fields := make(models.Fields, len(messages.Messages))
 	for _, message := range messages.Messages {
 		metricId := message.Tags[0]
 		value, err := strconv.ParseFloat(message.Data, 64)
@@ -68,7 +80,9 @@ func (server *Server) InfluxInsert(messages plexer.MessageSet) error {
 		}
 		fields[metricId] = value
 	}
-	point := tsdb.NewPoint("metrics", tags, fields, time.Now())
-	err := server.WritePoints("statistics", "2.days", []tsdb.Point{point})
-	return err
+	point, err := models.NewPoint("metrics", tags, fields, time.Now())
+	if err != nil {
+		return err
+	}
+	return server.WritePoints("statistics", "2.days", []models.Point{point})
 }
