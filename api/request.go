@@ -1,10 +1,8 @@
-package routes
+package api
 
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/influxdb/influxdb/influxql"
-	"github.com/nanobox-io/nanobox-api"
 	"github.com/nanopack/pulse/server"
 	"math"
 	"net/http"
@@ -18,10 +16,6 @@ type (
 	}
 )
 
-func Init() {
-	api.Router.Get("/services/{service}/stats/{stat}/hourly", api.TraceRequest(statRequest))
-	api.Router.Get("/services/{service}/stats/{stat}/daily_peaks", api.TraceRequest(combinedRequest))
-}
 
 func statRequest(res http.ResponseWriter, req *http.Request) {
 	rec, err := getStats(res, req)
@@ -53,7 +47,6 @@ func combinedRequest(res http.ResponseWriter, req *http.Request) {
 		// do some error stuff here
 		return
 	}
-	// 15 minute intervals in one day.
 	result := make(map[string]float64, 24*4)
 
 	for _, values := range rec.Series[0].Values {
