@@ -51,16 +51,11 @@ func main() {
 	}
 	defer server.Close()
 
-	influx, err := server.StartInfluxd()
-	if err != nil {
-		panic(err)
-	}
-	defer influx.Close()
-
 	poller := poller.NewPoller(server.Poll)
 	client := poller.NewClient()
 	defer client.Close()
 
+	// store externally in redis
 	polling_intervals := map[string]uint{
 		"cpu_used":      60,
 		"ram_used":      60,
@@ -88,12 +83,11 @@ func main() {
 	}
 
 	for _, query := range queries {
-		resChan, err := server.Query(query)
+		// what to do with results?
+		_, err := server.Query(query)
 		if err != nil {
 			panic(err)
 		}
-		// probably should validate this return
-		<-resChan
 	}
 
 	plex.AddBatcher("influx", server.InfluxInsert)

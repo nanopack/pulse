@@ -3,13 +3,19 @@ package server
 import (
 	"bufio"
 	"errors"
-	"github.com/influxdb/influxdb/cmd/influxd/run"
-	"github.com/nanopack/pulse/plexer"
+
 	"io"
 	"net"
 	"strings"
 	"time"
+
+	influx "github.com/influxdata/influxdb/client/v2"
+
+	"github.com/nanopack/pulse/plexer"
 )
+
+// to be replaced with config.Influx
+var InfluxServer = "http://localhost:8086"
 
 var (
 	MissingPublisher = errors.New("A publisher is needed")
@@ -18,7 +24,7 @@ var (
 type (
 	Publisher func(plexer.MessageSet) error
 	Server    struct {
-		Influx *run.Server
+		influxClient influx.Client
 		// I need a map that stores which client has which data points available
 		publish     Publisher
 		conn        io.Closer
@@ -45,6 +51,15 @@ func Listen(address string, publisher Publisher) (*Server, error) {
 		mappings:    make(map[string]map[string]interface{}, 0),
 		connections: make(map[string]net.Conn),
 	}
+
+	// use client instead of server in our server
+	server.influxClient, err = influx.NewHTTPClient(influx.HTTPConfig{
+		Addr: "http://localhost:8086",
+	})
+	if err != nil {
+		panic(err)
+	}
+	defer server.influxClient.Close()
 
 	go func() {
 		defer serverSocket.Close()

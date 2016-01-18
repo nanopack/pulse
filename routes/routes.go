@@ -3,12 +3,14 @@ package routes
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/influxdb/influxdb/influxql"
-	"github.com/nanobox-io/nanobox-api"
-	"github.com/nanopack/pulse/server"
 	"math"
 	"net/http"
 	"time"
+
+	influx "github.com/influxdata/influxdb/client/v2"
+
+	"github.com/nanobox-io/nanobox-api"
+	"github.com/nanopack/pulse/server"
 )
 
 type (
@@ -69,7 +71,7 @@ func combinedRequest(res http.ResponseWriter, req *http.Request) {
 	res.Write(bytes)
 }
 
-func getStats(res http.ResponseWriter, req *http.Request) (*influxql.Result, error) {
+func getStats(res http.ResponseWriter, req *http.Request) (influx.Result, error) {
 	server := api.User.(*server.Server)
 	service := req.URL.Query().Get(":service")
 	stat := req.URL.Query().Get(":stat")
@@ -77,7 +79,7 @@ func getStats(res http.ResponseWriter, req *http.Request) (*influxql.Result, err
 	fmt.Println(query)
 	records, err := server.Query(query)
 	if err != nil {
-		return nil, err
+		return records.Results[0], err
 	}
-	return <-records, nil
+	return records.Results[0], nil
 }
