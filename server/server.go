@@ -3,11 +3,12 @@ package server
 import (
 	"bufio"
 	"errors"
-	"github.com/influxdb/influxdb/cmd/influxd/run"
-	"github.com/nanopack/pulse/plexer"
+
 	"io"
 	"net"
 	"strings"
+
+	"github.com/nanopack/pulse/plexer"
 )
 
 var (
@@ -17,7 +18,6 @@ var (
 type (
 	Publisher func(plexer.MessageSet) error
 	Server    struct {
-		Influx *run.Server
 		// I need a map that stores which client has which data points available
 		publish     Publisher
 		conn        io.Closer

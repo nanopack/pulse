@@ -3,10 +3,13 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/nanopack/pulse/server"
 	"math"
 	"net/http"
 	"time"
+
+	"github.com/influxdata/influxdb/client/v2"
+
+	"github.com/nanopack/pulse/influx"
 )
 
 type (
@@ -62,15 +65,14 @@ func combinedRequest(res http.ResponseWriter, req *http.Request) {
 	res.Write(bytes)
 }
 
-func getStats(res http.ResponseWriter, req *http.Request) (*influxql.Result, error) {
-	server := api.User.(*server.Server)
+func getStats(res http.ResponseWriter, req *http.Request) (*client.Result, error) {
 	service := req.URL.Query().Get(":service")
 	stat := req.URL.Query().Get(":stat")
 	query := fmt.Sprintf(`select "%v" from "1.week".metrics where service = '%v'`, stat, service)
 	fmt.Println(query)
-	records, err := server.Query(query)
+	records, err := influx.Query(query)
 	if err != nil {
 		return nil, err
 	}
-	return <-records, nil
+	return &records.Results[0], nil
 }

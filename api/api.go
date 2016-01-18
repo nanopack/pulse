@@ -6,14 +6,12 @@ package api
 //
 import (
 	"encoding/json"
-	"io/ioutil"
 	"net/http"
-	"net/http/httputil"
-	"net/url"
 
 	"github.com/gorilla/pat"
 	"github.com/nanobox-io/nanoauth"
-	"github.com/pborman/uuid"
+	"github.com/jcelliott/lumber"
+	"github.com/spf13/viper"
 )
 
 // structs
@@ -42,7 +40,7 @@ func (api *API) Start() error {
 	}
 
 	//
-	log.Info("[NANOBOX :: API] Listening on port %v\n", config.APIPort)
+	log.Info("[NANOBOX :: API] Listening on port %v\n", viper.GetString("http_listen_address"))
 
 	// blocking...
 	return nanoauth.ListenAndServeTLS(viper.GetString("http_listen_address"), viper.GetString("token"), routes)
@@ -60,8 +58,8 @@ func (api *API) registerRoutes() (*pat.Router, error) {
 		rw.Write([]byte("pong"))
 	})
 
-	Get("/services/{service}/stats/{stat}/hourly", api.handleRequest(statRequest))
-	Get("/services/{service}/stats/{stat}/daily_peaks", api.handleRequest(combinedRequest))	
+	router.Get("/services/{service}/stats/{stat}/hourly", api.handleRequest(statRequest))
+	router.Get("/services/{service}/stats/{stat}/daily_peaks", api.handleRequest(combinedRequest))	
 
 	return router, nil
 }
