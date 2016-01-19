@@ -152,7 +152,7 @@ func KeepContinuousQueriesUpToDate() error {
 		}
 
 		// create new query string
-		newQuery := `CREATE CONTINUOUS QUERY aggregate ON statistics BEGIN SELECT `+fmt.Sprintf(strings.Join(summary, ", "))+` INTO statistics."1.week".metrics FROM statistics."2.days".metrics GROUP BY time(`+aggregate_interval+`m), `+fmt.Sprintf(strings.Join(group, ", "))+` END`
+		newQuery := `CREATE CONTINUOUS QUERY aggregate ON statistics BEGIN SELECT `+fmt.Sprintf(strings.Join(summary, ", "))+` INTO statistics."1.week".metrics FROM statistics."2.days".metrics GROUP BY time(`+strconv.Itoa(aggregate_interval)+`m), `+fmt.Sprintf(strings.Join(group, ", "))+` END`
 
 		// if columns changed, rebuild continuous query
 		if (currentQuery != newQuery) && columns != nil {
@@ -167,6 +167,6 @@ func KeepContinuousQueriesUpToDate() error {
 			}
 		}
 
-		<-time.After(aggregate_interval * time.Minute)
+		<-time.After(time.Duration(aggregate_interval) * time.Minute)
 	}
 }

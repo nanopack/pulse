@@ -96,5 +96,5 @@ func serverStart() {
 		panic(err)
 	}
 
-	go KeepContinuousQueriesUpToDate()
+	go influx.KeepContinuousQueriesUpToDate()
 }
