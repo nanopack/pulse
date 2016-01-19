@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"errors"
 
-	"io"
 	"net"
 	"strings"
 
@@ -13,37 +12,26 @@ import (
 
 var (
 	MissingPublisher = errors.New("A publisher is needed")
+	publish Publisher
 )
+
 
 type (
 	Publisher func(plexer.MessageSet) error
-	Server    struct {
-		// I need a map that stores which client has which data points available
-		publish     Publisher
-		conn        io.Closer
-		mappings    map[string]map[string]interface{}
-		connections map[string]net.Conn
-	}
 )
 
-func Listen(address string, publisher Publisher) (*Server, error) {
+func Listen(address string, publisher Publisher) error {
 	if publisher == nil {
-		return nil, MissingPublisher
-	}
-	if address == "" {
-		address = "127.0.0.1:1445"
-	}
-	serverSocket, err := net.Listen("tcp", address)
-	if err != nil {
-		return nil, err
+		return MissingPublisher
 	}
 
-	server := &Server{
-		publish:     publisher,
-		conn:        serverSocket,
-		mappings:    make(map[string]map[string]interface{}, 0),
-		connections: make(map[string]net.Conn),
+	publish = publisher
+
+	serverSocket, err := net.Listen("tcp", address)
+	if err != nil {
+		return err
 	}
+
 
 	go func() {
 		defer serverSocket.Close()
@@ -51,22 +39,19 @@ func Listen(address string, publisher Publisher) (*Server, error) {
 		for {
 			conn, err := serverSocket.Accept()
 			if err != nil {
-				// what should we do with the error?
-				return
+				// if the connection stops working we should
+				// panic so we never are in a state where we thing
+				// its accepting and it isnt
+				panic(err)
 			}
 
 			// handle each connection individually (non-blocking)
-			go handleConnection(server, conn)
+			go handleConnection(conn)
 		}
 	}()
-	return server, nil
+	return nil
 }
-
-func (server *Server) Close() error {
-	return server.conn.Close()
-}
-
-func handleConnection(server *Server, conn net.Conn) {
+func handleConnection(conn net.Conn) {
 	defer conn.Close()
 	r := bufio.NewReader(conn)
 	line, err := r.ReadString('\n')
@@ -85,9 +70,7 @@ func handleConnection(server *Server, conn net.Conn) {
 	}
 
 	id := split[1]
-	server.mappings[id] = make(map[string]interface{})
-	server.connections[id] = conn
-
+	clients[id] = &client{conn: conn}
 	conn.Write([]byte("ok\n"))
 
 	// now handle commands and data
@@ -117,7 +100,8 @@ func handleConnection(server *Server, conn net.Conn) {
 			for _, stat := range stats {
 				splitStat := strings.Split(stat, ":")
 				if len(splitStat) != 2 {
-					return
+					// i can only handle key value
+					continue
 				}
 
 				message := plexer.Message{
@@ -127,16 +111,16 @@ func handleConnection(server *Server, conn net.Conn) {
 
 				metric.Messages = append(metric.Messages, message)
 			}
-			server.publish(metric)
+			publish(metric)
 		case "add":
 			// record that the remote has a stat available
-			server.mappings[id][split[1]] = true
+			clients[id].add(split[1])
 		case "remove":
-			delete(server.mappings[id], split[1])
+			clients[id].remove(split[1])
 			// record that the remote does not have a stat available
 		case "close":
 			// clean shutoff of the connection
-			delete(server.mappings, id)
+			delete(clients, id)
 		default:
 			conn.Write([]byte("unknown command\n"))
 		}
@@ -144,25 +128,12 @@ func handleConnection(server *Server, conn net.Conn) {
 	}
 }
 
-// func (server *Server) Override(override map[string]int, duration time.Duration) {
-// 	tags := make([]string, len(override))
-// 	pairs := make([]string, len(override))
-// 	for key, override := range override {
-// 		tags = append(tags, key)
-// 		pairs = append(pairs, key+":"+string(override))
-
-// 	}
-// 	command := "override " + string(duration) + " " + strings.Join(pairs, ",") + "\n"
-// 	ids := server.findIds(tags)
-// 	server.sendAll(command, ids)
-// }
-
 // returns the server ids associated with the tags given
-func (server *Server) findIds(tags []string) []string {
+func findIds(tags []string) []string {
 	ids := make([]string, 0)
-	for id, checkTags := range server.mappings {
+	for id, client := range clients {
 		for _, tag := range tags {
-			if _, ok := checkTags[tag]; ok {
+			if client.includes(tag) {
 				ids = append(ids, id)
 				break
 			}
@@ -171,11 +142,11 @@ func (server *Server) findIds(tags []string) []string {
 	return ids
 }
 
-func (server *Server) sendAll(command string, ids []string) {
+func sendAll(command string, ids []string) {
 	for _, id := range ids {
-		connection, ok := server.connections[id]
+		client, ok := clients[id]
 		if ok {
-			go connection.Write([]byte(command))
+			go client.conn.Write([]byte(command))
 		}
 	}
 }

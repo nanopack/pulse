@@ -1,6 +1,8 @@
 package main
 
 import (
+	"time"
+	
 	"github.com/jcelliott/lumber"
 	"github.com/nanopack/mist/core"
 	"github.com/nanopack/pulse/api"
@@ -64,11 +66,17 @@ func serverStart() {
 
 	plex.AddBatcher("influx", influx.Insert)
 
-	server, err := server.Listen(viper.GetString("server_listen_address"), plex.Publish)
+	err := server.Listen(viper.GetString("server_listen_address"), plex.Publish)
 	if err != nil {
 		panic(err)
 	}
-	defer server.Close()
+	// begin polling the connected servers
+	pi := viper.GetInt("poll_interval")
+	if pi == 0 {
+		pi = 60
+	}
+	go server.StartPolling(nil, nil, time.Duration(pi) * time.Second, nil)
+
 
 	queries := []string{
 		"CREATE DATABASE statistics",
@@ -83,6 +91,8 @@ func serverStart() {
 			panic(err)
 		}
 	}
+
+
 	
 	err = api.Start()
 	if err != nil {

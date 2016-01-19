@@ -15,16 +15,22 @@ var address = "127.0.0.1:1234"
 
 func TestEndToEnd(test *testing.T) {
 	wait := sync.WaitGroup{}
-	server, err := server.Listen(address, func(messages plexer.MessageSet) error {
+	err := server.Listen(address, func(messages plexer.MessageSet) error {
 		wait.Add(-len(messages.Messages))
 		return nil
 	})
 
-	assert(test, err == nil, "unable to listen %v", err)
-	defer server.Close()
+	if err != nil {
+		test.Errorf("unable to listen %v", err)
+		return
+	}
 
 	relay, err := relay.NewRelay(address, "relay.station.1")
-	assert(test, err == nil, "unable to connect to server %v", err)
+	if err != nil {
+		test.Errorf("unable to connect to server %v", err)
+		return
+	}
+
 	defer relay.Close()
 
 	cpuCollector := randCollector()
