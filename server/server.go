@@ -100,7 +100,8 @@ func handleConnection(conn net.Conn) {
 			for _, stat := range stats {
 				splitStat := strings.Split(stat, ":")
 				if len(splitStat) != 2 {
-					return
+					// i can only handle key value
+					continue
 				}
 
 				message := plexer.Message{

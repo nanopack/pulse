@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-// StartPolling(nil, nil, 60, ch)
+// StartPolling(nil, nil, 60, nil)
 // StartPolling(nil, []string{"cpu"}, 1, ch)
 // StartPolling([]string{"computer1", "computer2"}, []string{"cpu"}, 1, ch)
 func StartPolling(ids, tags []string, interval time.Duration, done chan struct{}) {
