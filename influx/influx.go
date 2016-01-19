@@ -78,3 +78,95 @@ func influxClient() (client.Client, error) {
 	})
 	return clientConn, err
 }
+
+func KeepContinuousQueriesUpToDate() error {
+	c, err := influxClient()
+	if err != nil {
+		return err
+	}
+	var aggregate_interval = viper.GetInt("aggregate_interval")
+
+	for {
+		// get fields
+		cols, err := c.Query(client.NewQuery("SHOW FIELD KEYS FROM \"2.days\".\"metrics\"", "statistics", "s"))
+		if err != nil {
+			panic(err)
+		}
+
+		// check tags
+		groupBy, err := c.Query(client.NewQuery("SHOW TAG KEYS FROM \"2.days\".\"metrics\"", "statistics", "s"))
+		if err != nil {
+			panic(err)
+		}
+
+		// get continuous queries
+		cont, err := c.Query(client.NewQuery("SHOW CONTINUOUS QUERIES", "statistics", "s"))
+    if err != nil {
+      panic(err)
+    }
+
+		// get current query
+    var currentQuery string
+    for _, res := range cont.Results {
+      for _, series := range res.Series {
+        if series.Name == "statistics" {
+          for _, val := range series.Values {
+            if val[0].(string) == "aggregate" {
+							currentQuery = val[1].(string)
+            }
+          }
+        }
+      }
+    }
+
+		// populate current columns
+		group := []string{}
+		for _, res := range groupBy.Results {
+			for _, series := range res.Series {
+				if series.Name == "metrics" {
+					for _, val := range series.Values {
+						group = append(group, val[0].(string))
+					}
+				}
+			}
+		}
+
+		// populate current columns
+		columns := []string{}
+		for _, res := range cols.Results {
+			for _, series := range res.Series {
+				if series.Name == "metrics" {
+					for _, val := range series.Values {
+						columns = append(columns, val[0].(string))
+					}
+				}
+			}
+		}
+
+		// group columns into "mean(col) AS col"
+		summary := []string{}
+		for _, col := range columns {
+			if col != "cpu" && col != "time" {
+				summary = append(summary, fmt.Sprintf(`mean(%s) AS "%s"`, col, col))
+			}
+		}
+
+		// create new query string
+		newQuery := `CREATE CONTINUOUS QUERY aggregate ON statistics BEGIN SELECT `+fmt.Sprintf(strings.Join(summary, ", "))+` INTO statistics."1.week".metrics FROM statistics."2.days".metrics GROUP BY time(`+aggregate_interval+`m), `+fmt.Sprintf(strings.Join(group, ", "))+` END`
+
+		// if columns changed, rebuild continuous query
+		if (currentQuery != newQuery) && columns != nil {
+			r, err := c.Query(client.NewQuery(`DROP CONTINUOUS QUERY aggregate ON statistics`, "statistics", "s"))
+			if err != nil {
+				fmt.Printf("ERROR: %+v, %+v\n", r, err)
+			}
+
+			r, err = c.Query(client.NewQuery(newQuery, "statistics", "s"))
+			if err != nil {
+				fmt.Printf("ERROR: %+v, %+v\n", r, err)
+			}
+		}
+
+		<-time.After(aggregate_interval * time.Minute)
+	}
+}

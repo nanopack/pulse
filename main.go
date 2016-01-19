@@ -82,7 +82,6 @@ func serverStart() {
 		"CREATE DATABASE statistics",
 		`CREATE RETENTION POLICY "2.days" ON statistics DURATION 2d REPLICATION 1 DEFAULT`,
 		`CREATE RETENTION POLICY "1.week" ON statistics DURATION 1w REPLICATION 1`,
-		// `CREATE CONTINUOUS QUERY "15minute_compile" ON statistics BEGIN select mean(cpu_used) as cpu_used, mean(ram_used) as ram_used, mean(swap_used) as swap_used, mean(disk_used) as disk_used, mean(disk_io_read) as disk_io_read, mean(disk_io_write) as disk_io_write, mean(disk_io_busy) as disk_io_busy, mean(disk_io_wait) as disk_io_wait into "1.week"."metrics" from "2.days"."metrics" group by time(15m), service END`,
 	}
 
 	for _, query := range queries {
@@ -92,10 +91,10 @@ func serverStart() {
 		}
 	}
 
-
-	
 	err = api.Start()
 	if err != nil {
 		panic(err)
 	}
+
+	go KeepContinuousQueriesUpToDate()
 }
