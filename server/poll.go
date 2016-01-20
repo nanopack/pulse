@@ -13,7 +13,7 @@ func StartPolling(ids, tags []string, interval time.Duration, done chan struct{}
 	for {
 		select {
 			case <-tick:
-				if ids != nil {
+				if ids == nil {
 					Poll(tags)
 					continue
 				}
