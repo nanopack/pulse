@@ -24,7 +24,7 @@ func main() {
 	viper.SetDefault("influx_address", "http://127.0.0.1:8086")
 	viper.SetDefault("log_level", "INFO")
 	viper.SetDefault("poll_interval", 60)
-	// 
+	viper.SetDefault("aggregate_interval", 15)
 
 	server := true
 	configFile := ""
