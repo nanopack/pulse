@@ -21,8 +21,8 @@ var messages = []plexer.MessageSet{}
 
 func TestMain(m *testing.M) {
 	err := server.Listen(address, func(msgSet plexer.MessageSet) error {
-		wait.Add(-len(msgSet.Messages))
 		messages = append(messages, msgSet)
+		wait.Add(-len(msgSet.Messages))
 		return nil
 	})
 
