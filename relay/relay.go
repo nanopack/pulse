@@ -12,8 +12,9 @@ import (
 )
 
 var (
-	UnableToIdentify = errors.New("unable to identify with pulse")
-	ReservedName     = errors.New("cannot use - or : or , or _connected in your name")
+	UnableToIdentify   = errors.New("unable to identify with pulse")
+	ReservedName       = errors.New("cannot use - or : or , or _connected in your name")
+	DuplicateCollector = errors.New("cannot add a duplicate collector to the set")
 )
 
 type (
@@ -152,7 +153,9 @@ func (relay *Relay) AddCollector(name string, tags []string, collector collector
 	if name == "_connected" || strings.ContainsAny(name, "-:,") {
 		return ReservedName
 	}
-	relay.RemoveCollector(name)
+	if _, ok := relay.collectors[name]; ok {
+		return DuplicateCollector
+	}
 	relay.collectors[name] = collector
 	collector.Start()
 	t := strings.Join(tags, ",")
