@@ -9,8 +9,8 @@ import (
 	"net/http"
 
 	"github.com/gorilla/pat"
-	"github.com/nanobox-io/nanoauth"
 	"github.com/jcelliott/lumber"
+	"github.com/nanobox-io/nanoauth"
 	"github.com/spf13/viper"
 )
 
@@ -22,7 +22,6 @@ type (
 )
 
 var defaultAPI = &API{}
-var log lumber.Logger
 
 // start sets the state of the package if the config has all the necessary data for the api
 // and starts the default api server
@@ -32,15 +31,13 @@ func Start() error {
 
 // start routing web requests and handling all the routes
 func (api *API) Start() error {
-	log = viper.Get("log").(lumber.Logger)
-
 	routes, err := api.registerRoutes()
 	if err != nil {
 		return err
 	}
 
 	//
-	log.Info("[NANOBOX :: API] Listening on port %v\n", viper.GetString("http_listen_address"))
+	lumber.Info("[NANOBOX :: API] Listening on port %v\n", viper.GetString("http_listen_address"))
 
 	// blocking...
 	return nanoauth.ListenAndServeTLS(viper.GetString("http_listen_address"), viper.GetString("token"), routes)
@@ -48,7 +45,7 @@ func (api *API) Start() error {
 
 // registerRoutes
 func (api *API) registerRoutes() (*pat.Router, error) {
-	log.Debug("[NANOBOX :: API] Registering routes...\n")
+	lumber.Debug("[NANOBOX :: API] Registering routes...\n")
 
 	//
 	router := pat.New()
@@ -59,7 +56,7 @@ func (api *API) registerRoutes() (*pat.Router, error) {
 	})
 
 	router.Get("/services/{service}/stats/{stat}/hourly", api.handleRequest(statRequest))
-	router.Get("/services/{service}/stats/{stat}/daily_peaks", api.handleRequest(combinedRequest))	
+	router.Get("/services/{service}/stats/{stat}/daily_peaks", api.handleRequest(combinedRequest))
 
 	return router, nil
 }
@@ -68,7 +65,7 @@ func (api *API) registerRoutes() (*pat.Router, error) {
 func (api *API) handleRequest(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 
-		log.Debug(`
+		lumber.Trace(`
 Request:
 --------------------------------------------------------------------------------
 %+v
@@ -78,7 +75,7 @@ Request:
 		//
 		fn(rw, req)
 
-		log.Debug(`
+		lumber.Trace(`
 Response:
 --------------------------------------------------------------------------------
 %+v

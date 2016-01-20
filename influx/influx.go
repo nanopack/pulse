@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/influxdata/influxdb/client/v2"
+	"github.com/jcelliott/lumber"
 	"github.com/spf13/viper"
 
 	"github.com/nanopack/pulse/plexer"
@@ -54,9 +55,9 @@ func Insert(messages plexer.MessageSet) error {
 func writePoints(database, retain string, point client.Point) error {
 	// Create a new point batch
 	batchPoint, _ := client.NewBatchPoints(client.BatchPointsConfig{
-		Database:  database,
+		Database:        database,
 		RetentionPolicy: retain,
-		Precision: "s",
+		Precision:       "s",
 	})
 
 	batchPoint.AddPoint(&point)
@@ -80,6 +81,7 @@ func influxClient() (client.Client, error) {
 }
 
 func KeepContinuousQueriesUpToDate() error {
+	lumber.Trace("Watching continuous query...")
 	c, err := influxClient()
 	if err != nil {
 		return err
@@ -101,25 +103,25 @@ func KeepContinuousQueriesUpToDate() error {
 
 		// get continuous queries
 		cont, err := c.Query(client.NewQuery("SHOW CONTINUOUS QUERIES", "statistics", "s"))
-    if err != nil {
-      panic(err)
-    }
+		if err != nil {
+			panic(err)
+		}
 
 		// get current query
-    var currentQuery string
-    for _, res := range cont.Results {
-      for _, series := range res.Series {
-        if series.Name == "statistics" {
-          for _, val := range series.Values {
-            if val[0].(string) == "aggregate" {
+		var currentQuery string
+		for _, res := range cont.Results {
+			for _, series := range res.Series {
+				if series.Name == "statistics" {
+					for _, val := range series.Values {
+						if val[0].(string) == "aggregate" {
 							currentQuery = val[1].(string)
-            }
-          }
-        }
-      }
-    }
+						}
+					}
+				}
+			}
+		}
 
-		// populate current columns
+		// populate current tags
 		group := []string{}
 		for _, res := range groupBy.Results {
 			for _, series := range res.Series {
@@ -152,10 +154,11 @@ func KeepContinuousQueriesUpToDate() error {
 		}
 
 		// create new query string
-		newQuery := `CREATE CONTINUOUS QUERY aggregate ON statistics BEGIN SELECT `+fmt.Sprintf(strings.Join(summary, ", "))+` INTO statistics."1.week".metrics FROM statistics."2.days".metrics GROUP BY time(`+strconv.Itoa(aggregate_interval)+`m), `+fmt.Sprintf(strings.Join(group, ", "))+` END`
+		newQuery := `CREATE CONTINUOUS QUERY aggregate ON statistics BEGIN SELECT ` + fmt.Sprintf(strings.Join(summary, ", ")) + ` INTO statistics."1.week".metrics FROM statistics."2.days".metrics GROUP BY time(` + strconv.Itoa(aggregate_interval) + `m), ` + fmt.Sprintf(strings.Join(group, ", ")) + ` END`
 
 		// if columns changed, rebuild continuous query
 		if (currentQuery != newQuery) && columns != nil {
+			lumber.Trace("Rebuilding continuous query...")
 			r, err := c.Query(client.NewQuery(`DROP CONTINUOUS QUERY aggregate ON statistics`, "statistics", "s"))
 			if err != nil {
 				fmt.Printf("ERROR: %+v, %+v\n", r, err)

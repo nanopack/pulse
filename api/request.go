@@ -19,7 +19,6 @@ type (
 	}
 )
 
-
 func statRequest(res http.ResponseWriter, req *http.Request) {
 	rec, err := getStats(res, req)
 	if err != nil {

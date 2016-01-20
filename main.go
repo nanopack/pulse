@@ -2,16 +2,16 @@ package main
 
 import (
 	"time"
-	
+
 	"github.com/jcelliott/lumber"
 	"github.com/nanopack/mist/core"
-	"github.com/nanopack/pulse/api"
-	"github.com/nanopack/pulse/plexer"
-	"github.com/nanopack/pulse/server"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	"github.com/nanopack/pulse/api"
 	"github.com/nanopack/pulse/influx"
+	"github.com/nanopack/pulse/plexer"
+	"github.com/nanopack/pulse/server"
 )
 
 var configFile string
@@ -39,20 +39,23 @@ func main() {
 			}
 			viper.SetConfigFile(configFile)
 			viper.ReadInConfig()
-			viper.Set("log", lumber.NewConsoleLogger(lumber.LvlInt(viper.GetString("log_level"))))
+			lumber.Level(lumber.LvlInt(viper.GetString("log_level")))
+
 			serverStart()
 		},
 	}
 	command.Flags().String("http_listen_address", ":8080", "Http Listen address")
 	viper.BindPFlag("http_listen_address", command.Flags().Lookup("http_listen_address"))
+	command.Flags().String("log_level", "INFO", "Level at which to log")
+	viper.BindPFlag("log_level", command.Flags().Lookup("log_level"))
 	command.Flags().BoolVarP(&server, "server", "s", false, "Run as server")
-	command.Flags().StringVarP(&configFile, "configFile", "", "","config file location for server")
+	command.Flags().StringVarP(&configFile, "configFile", "", "", "Config file location for server")
 
 	command.Execute()
 }
 
 func serverStart() {
-	
+
 	plex := plexer.NewPlexer()
 
 	if viper.GetString("mist_address") != "" {
@@ -75,8 +78,7 @@ func serverStart() {
 	if pi == 0 {
 		pi = 60
 	}
-	go server.StartPolling(nil, nil, time.Duration(pi) * time.Second, nil)
-
+	go server.StartPolling(nil, nil, time.Duration(pi)*time.Second, nil)
 
 	queries := []string{
 		"CREATE DATABASE statistics",
@@ -91,10 +93,10 @@ func serverStart() {
 		}
 	}
 
+	go influx.KeepContinuousQueriesUpToDate()
+
 	err = api.Start()
 	if err != nil {
 		panic(err)
 	}
-
-	go influx.KeepContinuousQueriesUpToDate()
 }

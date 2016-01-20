@@ -3,7 +3,6 @@ package server
 import (
 	"bufio"
 	"errors"
-
 	"net"
 	"strings"
 
@@ -12,9 +11,8 @@ import (
 
 var (
 	MissingPublisher = errors.New("A publisher is needed")
-	publish Publisher
+	publish          Publisher
 )
-
 
 type (
 	Publisher func(plexer.MessageSet) error
@@ -31,7 +29,6 @@ func Listen(address string, publisher Publisher) error {
 	if err != nil {
 		return err
 	}
-
 
 	go func() {
 		defer serverSocket.Close()
@@ -122,7 +119,6 @@ func handleConnection(conn net.Conn) {
 					Tags: append(tags, name),
 					Data: splitStat[1],
 				}
-
 
 				metric.Messages = append(metric.Messages, message)
 			}

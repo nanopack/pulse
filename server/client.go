@@ -6,17 +6,16 @@ import (
 
 type (
 	client struct {
-		conn net.Conn
+		conn       net.Conn
 		collectors map[string][]string
 	}
-
 )
 
 var (
 	clients = map[string]*client{}
 )
 
-// 
+//
 func (c *client) add(collector string, tags []string) {
 	if c.collectors == nil {
 		c.collectors = map[string][]string{}
@@ -24,7 +23,7 @@ func (c *client) add(collector string, tags []string) {
 	c.collectors[collector] = tags
 }
 
-// 
+//
 func (c *client) remove(collector string) {
 	delete(c.collectors, collector)
 }

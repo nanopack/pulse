@@ -4,11 +4,12 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"github.com/nanopack/pulse/collector"
 	"net"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/nanopack/pulse/collector"
 )
 
 var (
