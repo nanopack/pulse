@@ -1,36 +1,45 @@
 package main
 
 import (
+	"fmt"
+	"math/rand"
+	"os"
+	"sync"
+	"testing"
+	"time"
+
 	"github.com/nanopack/pulse/collector"
 	"github.com/nanopack/pulse/plexer"
 	"github.com/nanopack/pulse/relay"
 	"github.com/nanopack/pulse/server"
-	"math/rand"
-	"sync"
-	"testing"
-	"time"
 )
 
 var address = "127.0.0.1:1234"
+var wait = sync.WaitGroup{}
 
-func TestEndToEnd(test *testing.T) {
-	wait := sync.WaitGroup{}
-	err := server.Listen(address, func(messages plexer.MessageSet) error {
-		wait.Add(-len(messages.Messages))
+var messages = []plexer.MessageSet{}
+
+func TestMain(m *testing.M) {
+	err := server.Listen(address, func(msgSet plexer.MessageSet) error {
+		wait.Add(-len(msgSet.Messages))
+		messages = append(messages, msgSet)
 		return nil
 	})
 
 	if err != nil {
-		test.Errorf("unable to listen %v", err)
+		panic(fmt.Sprintf("unable to listen %v", err))
 		return
 	}
+	rtn := m.Run()
+	os.Exit(rtn)
+}
 
+func TestEndToEnd(test *testing.T) {
 	relay, err := relay.NewRelay(address, "relay.station.1")
 	if err != nil {
 		test.Errorf("unable to connect to server %v", err)
 		return
 	}
-
 	defer relay.Close()
 
 	cpuCollector := randCollector()
@@ -54,17 +63,15 @@ func TestEndToEnd(test *testing.T) {
 	server.Poll([]string{"ram", "cpu", "disk"})
 	wait.Wait()
 
+	if len(messages) != 3 {
+		test.Errorf("Expected to recieve 3 messages but instead got %d", len(messages))
+	}
+	fmt.Printf("%#v\n", messages)
+	messages = []plexer.MessageSet{}
 }
 
 func randCollector() collector.Collector {
 	collect := collector.NewPointCollector(rand.Float64)
 	collect.SetInterval(time.Millisecond * 10)
 	return collect
-}
-
-func assert(test *testing.T, check bool, fmt string, args ...interface{}) {
-	if !check {
-		test.Logf(fmt, args...)
-		test.FailNow()
-	}
 }

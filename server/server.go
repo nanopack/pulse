@@ -130,7 +130,11 @@ func handleConnection(conn net.Conn) {
 			}
 
 			split = strings.SplitN(split[1], ":", 2)
-			clients[id].add(split[0], strings.Split(split[1], ","))
+			tags := strings.Split(split[1], ",")
+			if split[1] == "" {
+				tags = []string{}
+			}
+			clients[id].add(split[0], tags)
 		case "remove":
 			clients[id].remove(split[1])
 			// record that the remote does not have a stat available
