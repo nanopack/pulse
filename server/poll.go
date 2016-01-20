@@ -46,7 +46,7 @@ func Poll(tags []string) {
 
 func PollAll() {
 	for _, client := range clients {
-		command := "get " + strings.Join(client.tags, ",") + "\n"
+		command := "get " + strings.Join(client.collectorList(), ",") + "\n"
 		go client.conn.Write([]byte(command))
 	}	
 }

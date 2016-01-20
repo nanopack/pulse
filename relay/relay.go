@@ -13,7 +13,7 @@ import (
 
 var (
 	UnableToIdentify = errors.New("unable to identify with pulse")
-	ReservedName     = errors.New("name is reserved")
+	ReservedName     = errors.New("cannot use - or : or , or _connected in your name")
 )
 
 type (
@@ -91,8 +91,8 @@ func (relay *Relay) runLoop(reader *bufio.Reader) {
 				}
 
 			}
-			response := strings.Join(results, ",")
-			relay.conn.Write(append([]byte("got "), append([]byte(response), '\n')...))
+			response := fmt.Sprintf("got %s\n", strings.Join(results, ","))
+			relay.conn.Write([]byte(response))
 		case "flush":
 			for _, collector := range relay.collectors {
 				collector.Flush()
@@ -148,21 +148,22 @@ func (relay *Relay) Info() map[string]float64 {
 	return stats
 }
 
-func (relay *Relay) AddCollector(name string, collector collector.Collector) error {
-	switch {
-	case name == "_connected":
+func (relay *Relay) AddCollector(name string, tags []string, collector collector.Collector) error {
+	if name == "_connected" || strings.ContainsAny(name, "-:,") {
 		return ReservedName
 	}
 	relay.RemoveCollector(name)
 	relay.collectors[name] = collector
 	collector.Start()
-	relay.conn.Write([]byte(fmt.Sprintf("add %v\n", name)))
+	t := strings.Join(tags, ",")
+	relay.conn.Write([]byte(fmt.Sprintf("add %s:%s\n", name, t)))
 	return nil
 }
 
 func (relay *Relay) RemoveCollector(name string) {
 	collector, found := relay.collectors[name]
 	if found {
+		delete(relay.collectors, name)
 		collector.Stop()
 		relay.conn.Write([]byte(fmt.Sprintf("remove %v\n", name)))
 	}

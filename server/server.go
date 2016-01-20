@@ -80,6 +80,9 @@ func handleConnection(conn net.Conn) {
 			return
 		}
 		line = strings.TrimSuffix(line, "\n")
+		if line == "close" {
+			return
+		}
 		split := strings.SplitN(line, " ", 2)
 		if len(split) != 2 {
 			continue
@@ -93,7 +96,7 @@ func handleConnection(conn net.Conn) {
 			stats := strings.Split(split[1], ",")
 
 			metric := plexer.MessageSet{
-				Tags:     []string{"type:metrics", "service:" + id}, // TODO host tag may not be right
+				Tags:     []string{"metrics", "host:" + id},
 				Messages: make([]plexer.Message, 0),
 			}
 
@@ -104,17 +107,34 @@ func handleConnection(conn net.Conn) {
 					continue
 				}
 
+				name := splitStat[0]
+				splitName := strings.Split(name, "-")
+
+				tags := []string{}
+				switch {
+				case clients[id].includes(name):
+					tags = clients[id].tagList(name)
+				case clients[id].includes(splitName[0]):
+					tags = clients[id].tagList(splitName[0])
+				}
+
 				message := plexer.Message{
-					Tags: splitStat[:1],
+					Tags: append(tags, name),
 					Data: splitStat[1],
 				}
+
 
 				metric.Messages = append(metric.Messages, message)
 			}
 			publish(metric)
 		case "add":
-			// record that the remote has a stat available
-			clients[id].add(split[1])
+			if !strings.Contains(split[1], ":") {
+				clients[id].add(split[1], []string{})
+				continue
+			}
+
+			split = strings.SplitN(split[1], ":", 2)
+			clients[id].add(split[0], strings.Split(split[1], ","))
 		case "remove":
 			clients[id].remove(split[1])
 			// record that the remote does not have a stat available
@@ -128,12 +148,12 @@ func handleConnection(conn net.Conn) {
 	}
 }
 
-// returns the server ids associated with the tags given
-func findIds(tags []string) []string {
+// returns the server ids associated with the collector name given
+func findIds(collectors []string) []string {
 	ids := make([]string, 0)
 	for id, client := range clients {
-		for _, tag := range tags {
-			if client.includes(tag) {
+		for _, collector := range collectors {
+			if client.includes(collector) {
 				ids = append(ids, id)
 				break
 			}

@@ -34,13 +34,13 @@ func TestEndToEnd(test *testing.T) {
 	defer relay.Close()
 
 	cpuCollector := randCollector()
-	relay.AddCollector("cpu", cpuCollector)
+	relay.AddCollector("cpu", []string{"hi", "how", "are:you"}, cpuCollector)
 
 	ramCollector := randCollector()
-	relay.AddCollector("ram", ramCollector)
+	relay.AddCollector("ram", nil, ramCollector)
 
 	diskCollector := randCollector()
-	relay.AddCollector("disk", diskCollector)
+	relay.AddCollector("disk", nil, diskCollector)
 	time.Sleep(time.Millisecond * 100)
 	wait.Add(1)
 	server.Poll([]string{"disk"})

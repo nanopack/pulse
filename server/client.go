@@ -7,7 +7,7 @@ import (
 type (
 	client struct {
 		conn net.Conn
-		tags []string
+		collectors map[string][]string
 	}
 
 )
@@ -17,33 +17,31 @@ var (
 )
 
 // 
-func (c *client) add(tag string) {
-	add := true
-	for i := 0; i < len(c.tags); i++ {
-		if c.tags[i] == tag {
-			add = false
-		}
+func (c *client) add(collector string, tags []string) {
+	if c.collectors == nil {
+		c.collectors = map[string][]string{}
 	}
-	if add {
-		c.tags = append(c.tags, tag)
-	}
+	c.collectors[collector] = tags
 }
 
 // 
-func (c *client) remove(tag string) {
-	for i := 0; i < len(c.tags); i++ {
-		if c.tags[i] == tag {
-			c.tags = append(c.tags[:i], c.tags[i+1:]...)
-			return
-		}
-	}
+func (c *client) remove(collector string) {
+	delete(c.collectors, collector)
 }
 
-func (c client) includes(tag string) bool {
-	for i := 0; i < len(c.tags); i++ {
-		if c.tags[i] == tag {
-			return true
-		}
+func (c client) includes(collector string) bool {
+	_, ok := c.collectors[collector]
+	return ok
+}
+
+func (c client) tagList(collector string) []string {
+	return c.collectors[collector]
+}
+
+func (c client) collectorList() []string {
+	rtn := []string{}
+	for key, _ := range c.collectors {
+		rtn = append(rtn, key)
 	}
-	return false
+	return rtn
 }
