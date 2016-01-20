@@ -37,7 +37,7 @@ func (api *API) Start() error {
 	}
 
 	//
-	lumber.Info("[NANOBOX :: API] Listening on port %v\n", viper.GetString("http_listen_address"))
+	lumber.Info("[PULSE :: API] Listening at %v\n", viper.GetString("http_listen_address"))
 
 	// blocking...
 	return nanoauth.ListenAndServeTLS(viper.GetString("http_listen_address"), viper.GetString("token"), routes)
@@ -45,7 +45,7 @@ func (api *API) Start() error {
 
 // registerRoutes
 func (api *API) registerRoutes() (*pat.Router, error) {
-	lumber.Debug("[NANOBOX :: API] Registering routes...\n")
+	lumber.Debug("[PULSE :: API] Registering routes...\n")
 
 	//
 	router := pat.New()

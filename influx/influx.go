@@ -81,7 +81,7 @@ func influxClient() (client.Client, error) {
 }
 
 func KeepContinuousQueriesUpToDate() error {
-	lumber.Trace("Watching continuous query...")
+	lumber.Trace("[PULSE :: INFLUX] Watching continuous query...")
 	c, err := influxClient()
 	if err != nil {
 		return err
@@ -158,7 +158,7 @@ func KeepContinuousQueriesUpToDate() error {
 
 		// if columns changed, rebuild continuous query
 		if (currentQuery != newQuery) && columns != nil {
-			lumber.Trace("Rebuilding continuous query...")
+			lumber.Trace("[PULSE :: INFLUX] Rebuilding continuous query...")
 			r, err := c.Query(client.NewQuery(`DROP CONTINUOUS QUERY aggregate ON statistics`, "statistics", "s"))
 			if err != nil {
 				fmt.Printf("ERROR: %+v, %+v\n", r, err)

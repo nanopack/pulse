@@ -6,6 +6,8 @@ import (
 	"net"
 	"strings"
 
+	"github.com/jcelliott/lumber"
+
 	"github.com/nanopack/pulse/plexer"
 )
 
@@ -88,8 +90,10 @@ func handleConnection(conn net.Conn) {
 		cmd := split[0]
 		switch cmd {
 		case "ok":
+			lumber.Trace("[PULSE :: SERVER] OK: %v", split)
 			// just an ack
 		case "got":
+			lumber.Trace("[PULSE :: SERVER] GOT: %v", split)
 			stats := strings.Split(split[1], ",")
 
 			metric := plexer.MessageSet{
@@ -124,6 +128,7 @@ func handleConnection(conn net.Conn) {
 			}
 			publish(metric)
 		case "add":
+			lumber.Trace("[PULSE :: SERVER] ADD: %v", split)
 			if !strings.Contains(split[1], ":") {
 				clients[id].add(split[1], []string{})
 				continue
@@ -136,12 +141,15 @@ func handleConnection(conn net.Conn) {
 			}
 			clients[id].add(split[0], tags)
 		case "remove":
+			lumber.Trace("[PULSE :: SERVER] REMOVE: %v", split)
 			clients[id].remove(split[1])
 			// record that the remote does not have a stat available
 		case "close":
+			lumber.Trace("[PULSE :: SERVER] CLOSE: %v", split)
 			// clean shutoff of the connection
 			delete(clients, id)
 		default:
+			lumber.Trace("[PULSE :: SERVER] BAD: %v", split)
 			conn.Write([]byte("unknown command\n"))
 		}
 

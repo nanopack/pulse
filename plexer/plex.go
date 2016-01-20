@@ -2,6 +2,8 @@ package plexer
 
 import (
 	"errors"
+
+	"github.com/jcelliott/lumber"
 )
 
 var (
@@ -36,6 +38,7 @@ func NewPlexer() *Plexer {
 }
 
 func (plex *Plexer) AddBatcher(name string, observer BatchPublisher) {
+	lumber.Trace("[PULSE :: PLEXER] Add batcher: %v...", name)
 	plex.batch[name] = observer
 }
 

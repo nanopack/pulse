@@ -3,12 +3,15 @@ package server
 import (
 	"strings"
 	"time"
+
+	"github.com/jcelliott/lumber"
 )
 
 // StartPolling(nil, nil, 60, nil)
 // StartPolling(nil, []string{"cpu"}, 1, ch)
 // StartPolling([]string{"computer1", "computer2"}, []string{"cpu"}, 1, ch)
 func StartPolling(ids, tags []string, interval time.Duration, done chan struct{}) {
+	lumber.Trace("[PULSE :: SERVER] StartPolling...")
 	tick := time.Tick(interval)
 	for {
 		select {
@@ -35,6 +38,7 @@ func StartPolling(ids, tags []string, interval time.Duration, done chan struct{}
 }
 
 func Poll(tags []string) {
+	lumber.Trace("[PULSE :: SERVER] Poll...")
 	if tags == nil {
 		PollAll()
 		return
@@ -45,6 +49,7 @@ func Poll(tags []string) {
 }
 
 func PollAll() {
+	lumber.Trace("[PULSE :: SERVER] PollAll...")
 	for _, client := range clients {
 		command := "get " + strings.Join(client.collectorList(), ",") + "\n"
 		go client.conn.Write([]byte(command))
