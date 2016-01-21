@@ -29,24 +29,25 @@ type (
 		myId       string
 	}
 
+	// stores the collector (poorly named 'id') and its associated tags
 	valuer struct {
 		id   collector.Collector
 		tags []string
 	}
 )
 
-func NewRelay(address, id string) (*Relay, error) {
-
-	conn, err := net.Dial("tcp", address)
+// establishConnection establishes a connection and id's with the server
+func (relay *Relay) establishConnection() (*bufio.Reader, error) {
+	conn, err := net.Dial("tcp", relay.hostAddr)
 	if err != nil {
 		return nil, err
 	}
 
-	conn.Write([]byte(fmt.Sprintf("id %v\n", id)))
+	// send id
+	conn.Write([]byte(fmt.Sprintf("id %v\n", relay.myId)))
 
 	r := bufio.NewReader(conn)
 	line, err := r.ReadString('\n')
-
 	if err != nil {
 		return nil, err
 	}
@@ -54,12 +55,28 @@ func NewRelay(address, id string) (*Relay, error) {
 		return nil, UnableToIdentify
 	}
 
+	// on successful id, hand over good connection to relay
+	relay.conn = conn
+
+	// add relay's known collectors
+	for name, value := range relay.collectors {
+		relay.conn.Write([]byte(fmt.Sprintf("add %s:%s\n", name, strings.Join(value.tags, ","))))
+	}
+
+	return r, nil
+}
+
+// NewRelay creates a new relay
+func NewRelay(address, id string) (*Relay, error) {
 	relay := &Relay{
-		conn:       conn,
 		connected:  true,
 		collectors: make(map[string]valuer, 0),
 		hostAddr:   address,
 		myId:       id,
+	}
+	r, err := relay.establishConnection()
+	if err != nil {
+		return nil, err
 	}
 
 	go relay.runLoop(r)
@@ -67,35 +84,24 @@ func NewRelay(address, id string) (*Relay, error) {
 	return relay, nil
 }
 
+// runLoop handles communication from the server
 func (relay *Relay) runLoop(reader *bufio.Reader) {
 	for {
 		// when implementing relay, set `lumber.Level(lumber.LvlInt("TRACE"))` in client to view logs
 		line, err := reader.ReadString('\n')
 		if err != nil {
-			lumber.Trace("[PULSE :: RELAY] Disconnected from host %v!", relay.hostAddr)
-			// maybe keep looping infinitely, since program doesn't exit
-			for i := 0; i < 20; i++ {
-				if newRelay, err := NewRelay(relay.hostAddr, relay.myId); err == nil {
-					lumber.Trace("[PULSE :: RELAY] Reconnected to host %v!", relay.hostAddr)
-
-					// hand over new connection
-					relay.conn = newRelay.conn
-
-					// re-add collectors.. try, probably ranging wrong
-					for name, value := range relay.collectors {
-						lumber.Trace("[PULSE :: RELAY] Re-add collector %v, %v, %v!", name, value.tags, value.id)
-						relay.AddCollector(name, value.tags, value.id)
-					}
-
-					return
+			lumber.Error("[PULSE :: RELAY] Disconnected from host %v!", relay.hostAddr)
+			// retry indefinitely
+			for {
+				if reader, err = relay.establishConnection(); err == nil {
+					lumber.Info("[PULSE :: RELAY] Reconnected to host %v!", relay.hostAddr)
+					break
 				}
-				lumber.Trace("[PULSE :: RELAY] Reconnecting to host %v...  Fail!", relay.hostAddr)
-				<-time.After(6 * time.Second)
+				lumber.Debug("[PULSE :: RELAY] Reconnecting to host %v...  Fail!", relay.hostAddr)
+				<-time.After(5 * time.Second)
 			}
-			lumber.Error("[PULSE :: RELAY] Failed to reconnect to host %v! Giving up.", relay.hostAddr)
-			// do this?
-			relay.Close()
-			return
+			// we won't have anything in 'line' so continue
+			continue
 		}
 
 		line = strings.TrimSuffix(line, "\n")
@@ -126,9 +132,7 @@ func (relay *Relay) runLoop(reader *bufio.Reader) {
 					default:
 						results = append(results, stat+"-"+name+":"+formatted)
 					}
-
 				}
-
 			}
 			response := fmt.Sprintf("got %s\n", strings.Join(results, ","))
 			relay.conn.Write([]byte(response))
@@ -183,23 +187,30 @@ func (relay *Relay) Info() map[string]float64 {
 			default:
 				stats[collection+"-"+name] = value
 			}
-
 		}
 	}
 
 	return stats
 }
 
+// AddCollector adds a collector to relay
 func (relay *Relay) AddCollector(name string, tags []string, collector collector.Collector) error {
 	if name == "_connected" || strings.ContainsAny(name, "-:,") {
+		lumber.Trace("[PULSE :: RELAY] Reserved name!")
 		return ReservedName
 	}
 	if _, ok := relay.collectors[name]; ok {
+		lumber.Trace("[PULSE :: RELAY] Duplicate collector!")
 		return DuplicateCollector
 	}
-	relay.collectors[name] = valuer{id: collector, tags: tags}
+	if _, err := relay.conn.Write([]byte(fmt.Sprintf("add %s:%s\n", name, strings.Join(tags, ",")))); err != nil {
+		lumber.Trace("[PULSE :: RELAY] Failed to write!")
+		return err
+	}
 	collector.Start()
-	relay.conn.Write([]byte(fmt.Sprintf("add %s:%s\n", name, strings.Join(tags, ","))))
+
+	// if successfully added collector, add it to relay's known collectors
+	relay.collectors[name] = valuer{id: collector, tags: tags}
 	return nil
 }
 
