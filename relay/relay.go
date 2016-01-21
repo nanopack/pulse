@@ -77,7 +77,16 @@ func (relay *Relay) runLoop(reader *bufio.Reader) {
 			for i := 0; i < 20; i++ {
 				if newRelay, err := NewRelay(relay.hostAddr, relay.myId); err == nil {
 					lumber.Trace("[PULSE :: RELAY] Reconnected to host %v!", relay.hostAddr)
-					relay = newRelay
+
+					// hand over new connection
+					relay.conn = newRelay.conn
+
+					// re-add collectors.. try, probably ranging wrong
+					for name, value := range relay.collectors {
+						lumber.Trace("[PULSE :: RELAY] Re-add collector %v, %v, %v!", name, value.tags, value.id)
+						relay.AddCollector(name, value.tags, value.id)
+					}
+
 					return
 				}
 				lumber.Trace("[PULSE :: RELAY] Reconnecting to host %v...  Fail!", relay.hostAddr)
