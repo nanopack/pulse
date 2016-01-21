@@ -24,6 +24,7 @@ func Query(sql string) (*client.Response, error) {
 }
 
 func Insert(messages plexer.MessageSet) error {
+	lumber.Trace("[PULSE :: INFLUX] Insert: %v...", messages)
 	tags := make(map[string]string, 0)
 	for _, tag := range messages.Tags {
 		elems := strings.SplitN(tag, ":", 2)

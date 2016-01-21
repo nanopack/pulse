@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jcelliott/lumber"
+
 	"github.com/nanopack/pulse/collector"
 )
 
@@ -21,13 +23,20 @@ var (
 type (
 	Relay struct {
 		conn       net.Conn
-		collectors map[string]collector.Collector
+		collectors map[string]valuer
 		connected  bool
+		hostAddr   string
+		myId       string
+	}
+
+	valuer struct {
+		id   collector.Collector
+		tags []string
 	}
 )
 
 func NewRelay(address, id string) (*Relay, error) {
-	// should this reconnect?
+
 	conn, err := net.Dial("tcp", address)
 	if err != nil {
 		return nil, err
@@ -47,8 +56,10 @@ func NewRelay(address, id string) (*Relay, error) {
 
 	relay := &Relay{
 		conn:       conn,
-		collectors: make(map[string]collector.Collector, 0),
 		connected:  true,
+		collectors: make(map[string]valuer, 0),
+		hostAddr:   address,
+		myId:       id,
 	}
 
 	go relay.runLoop(r)
@@ -58,8 +69,23 @@ func NewRelay(address, id string) (*Relay, error) {
 
 func (relay *Relay) runLoop(reader *bufio.Reader) {
 	for {
+		// when implementing relay, set `lumber.Level(lumber.LvlInt("TRACE"))` in client to view logs
 		line, err := reader.ReadString('\n')
 		if err != nil {
+			lumber.Trace("[PULSE :: RELAY] Disconnected from host %v!", relay.hostAddr)
+			// maybe keep looping infinitely, since program doesn't exit
+			for i := 0; i < 20; i++ {
+				if newRelay, err := NewRelay(relay.hostAddr, relay.myId); err == nil {
+					lumber.Trace("[PULSE :: RELAY] Reconnected to host %v!", relay.hostAddr)
+					relay = newRelay
+					return
+				}
+				lumber.Trace("[PULSE :: RELAY] Reconnecting to host %v...  Fail!", relay.hostAddr)
+				<-time.After(6 * time.Second)
+			}
+			lumber.Error("[PULSE :: RELAY] Failed to reconnect to host %v! Giving up.", relay.hostAddr)
+			// do this?
+			relay.Close()
 			return
 		}
 
@@ -69,8 +95,10 @@ func (relay *Relay) runLoop(reader *bufio.Reader) {
 		cmd := split[0]
 		switch cmd {
 		case "ok":
+			lumber.Trace("[PULSE :: RELAY] OK: %v", split)
 			// just an ack
 		case "get":
+			lumber.Trace("[PULSE :: RELAY] GET: %v", split)
 			if len(split) != 2 {
 				continue
 			}
@@ -81,7 +109,7 @@ func (relay *Relay) runLoop(reader *bufio.Reader) {
 				if !ok {
 					continue
 				}
-				for name, value := range collector.Values() {
+				for name, value := range collector.id.Values() {
 					formatted := strconv.FormatFloat(value, 'f', 4, 64)
 					switch {
 					case name == "":
@@ -96,11 +124,13 @@ func (relay *Relay) runLoop(reader *bufio.Reader) {
 			response := fmt.Sprintf("got %s\n", strings.Join(results, ","))
 			relay.conn.Write([]byte(response))
 		case "flush":
+			lumber.Trace("[PULSE :: RELAY] FLUSH: %v", split)
 			for _, collector := range relay.collectors {
-				collector.Flush()
+				collector.id.Flush()
 			}
 			relay.conn.Write([]byte("ok\n"))
 		case "override":
+			lumber.Trace("[PULSE :: RELAY] OVERRIDE: %v", split)
 			args := strings.SplitN(split[1], " ", 2)
 			params := strings.Split(args[1], ",")
 			value, err := strconv.Atoi(args[0])
@@ -118,10 +148,11 @@ func (relay *Relay) runLoop(reader *bufio.Reader) {
 				if err != nil {
 					relay.conn.Write([]byte("bad argument\n"))
 				}
-				collector.OverrideInterval(time.Duration(value), duration)
+				collector.id.OverrideInterval(time.Duration(value), duration)
 			}
 			relay.conn.Write([]byte("ok\n"))
 		default:
+			lumber.Trace("[PULSE :: RELAY] BAD: %v", split)
 			relay.conn.Write([]byte("unknown command\n"))
 		}
 	}
@@ -135,7 +166,7 @@ func (relay *Relay) Info() map[string]float64 {
 	}
 
 	for collection, stat := range relay.collectors {
-		values := stat.Values()
+		values := stat.id.Values()
 		for name, value := range values {
 			switch {
 			case name == "":
@@ -157,10 +188,9 @@ func (relay *Relay) AddCollector(name string, tags []string, collector collector
 	if _, ok := relay.collectors[name]; ok {
 		return DuplicateCollector
 	}
-	relay.collectors[name] = collector
+	relay.collectors[name] = valuer{id: collector, tags: tags}
 	collector.Start()
-	t := strings.Join(tags, ",")
-	relay.conn.Write([]byte(fmt.Sprintf("add %s:%s\n", name, t)))
+	relay.conn.Write([]byte(fmt.Sprintf("add %s:%s\n", name, strings.Join(tags, ","))))
 	return nil
 }
 
@@ -168,7 +198,7 @@ func (relay *Relay) RemoveCollector(name string) {
 	collector, found := relay.collectors[name]
 	if found {
 		delete(relay.collectors, name)
-		collector.Stop()
+		collector.id.Stop()
 		relay.conn.Write([]byte(fmt.Sprintf("remove %v\n", name)))
 	}
 }
