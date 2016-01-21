@@ -10,8 +10,6 @@ import (
 	"time"
 
 	"github.com/jcelliott/lumber"
-
-	"github.com/nanopack/pulse/collector"
 )
 
 var (
@@ -23,15 +21,15 @@ var (
 type (
 	Relay struct {
 		conn       net.Conn
-		collectors map[string]valuer
+		collectors map[string]taggedCollector
 		connected  bool
 		hostAddr   string
 		myId       string
 	}
 
 	// stores the collector (poorly named 'id') and its associated tags
-	valuer struct {
-		id   collector.Collector
+	taggedCollector struct {
+		collector   Collector
 		tags []string
 	}
 )
@@ -70,7 +68,7 @@ func (relay *Relay) establishConnection() (*bufio.Reader, error) {
 func NewRelay(address, id string) (*Relay, error) {
 	relay := &Relay{
 		connected:  true,
-		collectors: make(map[string]valuer, 0),
+		collectors: make(map[string]taggedCollector, 0),
 		hostAddr:   address,
 		myId:       id,
 	}
@@ -120,11 +118,11 @@ func (relay *Relay) runLoop(reader *bufio.Reader) {
 			stats := strings.Split(split[1], ",")
 			results := make([]string, 0)
 			for _, stat := range stats {
-				collector, ok := relay.collectors[stat]
+				tagCollector, ok := relay.collectors[stat]
 				if !ok {
 					continue
 				}
-				for name, value := range collector.id.Values() {
+				for name, value := range tagCollector.collector.Collect() {
 					formatted := strconv.FormatFloat(value, 'f', 4, 64)
 					switch {
 					case name == "":
@@ -136,34 +134,6 @@ func (relay *Relay) runLoop(reader *bufio.Reader) {
 			}
 			response := fmt.Sprintf("got %s\n", strings.Join(results, ","))
 			relay.conn.Write([]byte(response))
-		case "flush":
-			lumber.Trace("[PULSE :: RELAY] FLUSH: %v", split)
-			for _, collector := range relay.collectors {
-				collector.id.Flush()
-			}
-			relay.conn.Write([]byte("ok\n"))
-		case "override":
-			lumber.Trace("[PULSE :: RELAY] OVERRIDE: %v", split)
-			args := strings.SplitN(split[1], " ", 2)
-			params := strings.Split(args[1], ",")
-			value, err := strconv.Atoi(args[0])
-			if err != nil {
-				relay.conn.Write([]byte("bad argument\n"))
-			}
-			duration := time.Second * time.Duration(value)
-			for _, param := range params {
-				stat := strings.Split(param, ":")
-				collector, ok := relay.collectors[stat[0]]
-				if !ok {
-					continue
-				}
-				value, err = strconv.Atoi(stat[1])
-				if err != nil {
-					relay.conn.Write([]byte("bad argument\n"))
-				}
-				collector.id.OverrideInterval(time.Duration(value), duration)
-			}
-			relay.conn.Write([]byte("ok\n"))
 		default:
 			lumber.Trace("[PULSE :: RELAY] BAD: %v", split)
 			relay.conn.Write([]byte("unknown command\n"))
@@ -179,7 +149,7 @@ func (relay *Relay) Info() map[string]float64 {
 	}
 
 	for collection, stat := range relay.collectors {
-		values := stat.id.Values()
+		values := stat.collector.Collect()
 		for name, value := range values {
 			switch {
 			case name == "":
@@ -194,7 +164,7 @@ func (relay *Relay) Info() map[string]float64 {
 }
 
 // AddCollector adds a collector to relay
-func (relay *Relay) AddCollector(name string, tags []string, collector collector.Collector) error {
+func (relay *Relay) AddCollector(name string, tags []string, collector Collector) error {
 	if name == "_connected" || strings.ContainsAny(name, "-:,") {
 		lumber.Trace("[PULSE :: RELAY] Reserved name!")
 		return ReservedName
@@ -207,18 +177,16 @@ func (relay *Relay) AddCollector(name string, tags []string, collector collector
 		lumber.Trace("[PULSE :: RELAY] Failed to write!")
 		return err
 	}
-	collector.Start()
 
 	// if successfully added collector, add it to relay's known collectors
-	relay.collectors[name] = valuer{id: collector, tags: tags}
+	relay.collectors[name] = taggedCollector{collector: collector, tags: tags}
 	return nil
 }
 
 func (relay *Relay) RemoveCollector(name string) {
-	collector, found := relay.collectors[name]
+	_, found := relay.collectors[name]
 	if found {
 		delete(relay.collectors, name)
-		collector.id.Stop()
 		relay.conn.Write([]byte(fmt.Sprintf("remove %v\n", name)))
 	}
 }

@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nanopack/pulse/collector"
 	"github.com/nanopack/pulse/plexer"
 	"github.com/nanopack/pulse/relay"
 	"github.com/nanopack/pulse/server"
@@ -42,14 +41,11 @@ func TestEndToEnd(test *testing.T) {
 	}
 	defer relay.Close()
 
-	cpuCollector := randCollector()
-	relay.AddCollector("cpu", []string{"hi", "how", "are:you"}, cpuCollector)
+	relay.AddCollector("cpu", []string{"hi", "how", "are:you"}, randCollector())
 
-	ramCollector := randCollector()
-	relay.AddCollector("ram", nil, ramCollector)
+	relay.AddCollector("ram", nil, randCollector())
 
-	diskCollector := randCollector()
-	relay.AddCollector("disk", nil, diskCollector)
+	relay.AddCollector("disk", nil, randCollector())
 	time.Sleep(time.Millisecond * 100)
 	wait.Add(1)
 	server.Poll([]string{"disk"})
@@ -66,12 +62,9 @@ func TestEndToEnd(test *testing.T) {
 	if len(messages) != 3 {
 		test.Errorf("Expected to recieve 3 messages but instead got %d", len(messages))
 	}
-	fmt.Printf("%#v\n", messages)
 	messages = []plexer.MessageSet{}
 }
 
-func randCollector() collector.Collector {
-	collect := collector.NewPointCollector(rand.Float64)
-	collect.SetInterval(time.Millisecond * 10)
-	return collect
+func randCollector() relay.Collector {
+	return relay.NewPointCollector(rand.Float64)
 }
