@@ -17,6 +17,7 @@ type (
 		Tags     []string
 		Messages []Message
 	}
+
 	Message struct {
 		Tags []string
 		Data string

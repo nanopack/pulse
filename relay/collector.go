@@ -1,7 +1,6 @@
 package relay
 
-import (
-)
+import ()
 
 type (
 	Collector interface {
@@ -24,4 +23,3 @@ func NewPointCollector(pf func() float64) Collector {
 func NewSetCollector(sf collectorHandle) Collector {
 	return sf
 }
-

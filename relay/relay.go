@@ -29,8 +29,8 @@ type (
 
 	// stores the collector (poorly named 'id') and its associated tags
 	taggedCollector struct {
-		collector   Collector
-		tags []string
+		collector Collector
+		tags      []string
 	}
 )
 
