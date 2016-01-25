@@ -27,7 +27,6 @@ func TestMain(m *testing.M) {
 
 	if err != nil {
 		panic(fmt.Sprintf("unable to listen %v", err))
-		return
 	}
 	rtn := m.Run()
 	os.Exit(rtn)
