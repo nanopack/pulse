@@ -23,44 +23,57 @@ func Query(sql string) (*client.Response, error) {
 	return c.Query(client.NewQuery(fmt.Sprint(sql), "statistics", "s"))
 }
 
-func Insert(messages plexer.MessageSet) error {
-	lumber.Trace("[PULSE :: INFLUX] Insert: %v...", messages)
-	tags := make(map[string]string, 0)
-	for _, tag := range messages.Tags {
-		elems := strings.SplitN(tag, ":", 2)
-		if len(elems) < 2 {
-			continue
+func Insert(messageSet plexer.MessageSet) error {
+	lumber.Trace("[PULSE :: INFLUX] Insert: %v...", messageSet)
+
+	// create a set of points we will be inserting
+	points := []*client.Point{}
+
+	for _, message := range messageSet.Messages {
+		// create a list of tags for each message
+		tags := map[string]string{}
+
+		// make sure to include the MessageSet's tags
+		for _, tag := range append(messageSet.Tags, message.Tags...) {
+			elems := strings.SplitN(tag, ":", 2)
+			// only include tags with key:value format
+			if len(elems) < 2 {
+				continue
+			}
+
+			// insert the tag into my list of tags
+			tags[elems[0]] = elems[1]
 		}
 
-		tags[elems[0]] = elems[1]
-	}
-
-	fields := make(map[string]interface{}, len(messages.Messages))
-	for _, message := range messages.Messages {
+		// if there
 		value, err := strconv.ParseFloat(message.Data, 64)
 		if err != nil {
 			value = -1
 		}
-		fields[message.ID] = value
-	}
 
-	// create a point
-	point, err := client.NewPoint("metrics", tags, fields, time.Now())
-	if err != nil {
-		return err
+		// only one field per set of message tags.
+		field := map[string]interface{}{message.ID: value}
+		// create a point
+		point, err := client.NewPoint("metrics", tags, field, time.Now())
+		if err != nil {
+			continue
+		}
+		points = append(points, point)
 	}
-	return writePoints("statistics", "2.days", *point)
+	return writePoints("statistics", "2.days", points)
 }
 
-func writePoints(database, retain string, point client.Point) error {
+func writePoints(database, retain string, points []*client.Point) error {
 	// Create a new point batch
 	batchPoint, _ := client.NewBatchPoints(client.BatchPointsConfig{
 		Database:        database,
 		RetentionPolicy: retain,
 		Precision:       "s",
 	})
+	for _, point := range points {
+		batchPoint.AddPoint(point)
+	}
 
-	batchPoint.AddPoint(&point)
 	c, err := influxClient()
 	if err != nil {
 		return err
