@@ -27,14 +27,13 @@ func statRequest(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 	if len(rec.Series) != 1 {
-		res.WriteHeader(500)
-		res.Write([]byte(fmt.Sprintf("%s\n", err.Error())))
+		res.WriteHeader(404)
 		return
 	}
 	result := make([]point, len(rec.Series[0].Values))
 	for idx, values := range rec.Series[0].Values {
-		temp, _:= values[0].(json.Number).Int64()
-		result[idx].Time     = temp * 1000
+		temp, _ := values[0].(json.Number).Int64()
+		result[idx].Time = temp * 1000
 		result[idx].Value, _ = values[1].(json.Number).Float64()
 	}
 	bytes, err := json.Marshal(result)
@@ -54,8 +53,7 @@ func combinedRequest(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 	if len(rec.Series) != 1 {
-		res.WriteHeader(500)
-		res.Write([]byte(fmt.Sprintf("%s\n", err.Error())))
+		res.WriteHeader(404)
 		return
 	}
 	result := make(map[string]float64, 24*4)
