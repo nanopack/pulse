@@ -3,6 +3,7 @@ package influx_test
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
@@ -12,15 +13,12 @@ import (
 	"github.com/nanopack/pulse/plexer"
 )
 
-func TestInflux(t *testing.T) {
+func TestMain(m *testing.M) {
 	// start influx
 
 	// configure influx to connect to (DO NOT TEST ON PRODUCTION)
 	viper.SetDefault("influx_address", "http://localhost:8086")
 	viper.SetDefault("aggregate_interval", 1)
-
-	// start cq checker
-	go influx.KeepContinuousQueriesUpToDate()
 
 	// initialize influx
 	queries := []string{
@@ -33,9 +31,20 @@ func TestInflux(t *testing.T) {
 	for _, query := range queries {
 		_, err := influx.Query(query)
 		if err != nil {
-			t.Error("Failed to QUERY/INITIALIZE - ", err)
+			fmt.Println("Failed to QUERY/INITIALIZE - ", err)
+			os.Exit(1)
 		}
 	}
+
+	rtn := m.Run()
+
+	_, err := influx.Query("DROP DATABASE statistics")
+	if err != nil {
+		fmt.Println("Failed to QUERY/INITIALIZE - ", err)
+		os.Exit(1)
+	}
+
+	os.Exit(rtn)
 }
 func TestInsert(t *testing.T) {
 	// define fake messages
@@ -61,12 +70,14 @@ func TestQuery(t *testing.T) {
 	if cpu_used != json.Number("0.34") {
 		t.Error("Failed to QUERY influx - ( BAD INSERT: expected: 0.34, got: ", cpu_used, ")")
 	}
-	t.Logf("Waiting 65s for query to update")
 }
 
 func TestContinuousQuery(t *testing.T) {
-	// wait for it to update
-	time.Sleep(time.Second * 65)
+	// start cq checker
+	go influx.KeepContinuousQueriesUpToDate()
+
+	// give it a second to update
+	time.Sleep(time.Second)
 
 	// ensure insert worked
 	response, err := influx.Query(`SHOW CONTINUOUS QUERIES`)
