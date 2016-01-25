@@ -120,7 +120,8 @@ func handleConnection(conn net.Conn) {
 				}
 
 				message := plexer.Message{
-					Tags: append(tags, name),
+					ID:   name,
+					Tags: tags,
 					Data: splitStat[1],
 				}
 

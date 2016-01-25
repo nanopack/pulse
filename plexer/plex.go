@@ -19,6 +19,7 @@ type (
 	}
 
 	Message struct {
+		ID   string
 		Tags []string
 		Data string
 	}
@@ -67,18 +68,19 @@ func (plex *Plexer) Publish(messages MessageSet) error {
 	for _, observer := range plex.single {
 		for _, message := range messages.Messages {
 			message.Tags = append(message.Tags, messages.Tags...)
-			go observer(message.Tags, message.Data)
+			go observer(append(message.Tags, message.ID), message.Data)
 		}
 	}
 	return nil
 }
 
-func (plex *Plexer) PublishSingle(tags []string, data string) error {
+func (plex *Plexer) PublishSingle(id string, tags []string, data string) error {
 
 	messages := MessageSet{
 		Tags: []string{},
 		Messages: []Message{
 			Message{
+				ID:   id,
 				Tags: tags,
 				Data: data,
 			},

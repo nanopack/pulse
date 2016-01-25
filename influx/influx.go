@@ -37,12 +37,11 @@ func Insert(messages plexer.MessageSet) error {
 
 	fields := make(map[string]interface{}, len(messages.Messages))
 	for _, message := range messages.Messages {
-		metricId := message.Tags[0]
 		value, err := strconv.ParseFloat(message.Data, 64)
 		if err != nil {
 			value = -1
 		}
-		fields[metricId] = value
+		fields[message.ID] = value
 	}
 
 	// create a point
