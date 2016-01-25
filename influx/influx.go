@@ -24,7 +24,7 @@ func Query(sql string) (*client.Response, error) {
 }
 
 func Insert(messageSet plexer.MessageSet) error {
-	lumber.Trace("[PULSE :: INFLUX] Insert: %v...", messageSet)
+	lumber.Trace("[PULSE :: INFLUX] Insert: %+v...", messageSet)
 
 	// create a set of points we will be inserting
 	points := []*client.Point{}
@@ -68,7 +68,7 @@ func writePoints(database, retain string, points []*client.Point) error {
 	batchPoint, _ := client.NewBatchPoints(client.BatchPointsConfig{
 		Database:        database,
 		RetentionPolicy: retain,
-		Precision:       "s",
+		Precision:       "ns",
 	})
 	for _, point := range points {
 		batchPoint.AddPoint(point)

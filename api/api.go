@@ -65,22 +65,12 @@ func (api *API) registerRoutes() (*pat.Router, error) {
 func (api *API) handleRequest(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 
-		lumber.Trace(`
-Request:
---------------------------------------------------------------------------------
-%+v
-
-`, req)
-
-		//
 		fn(rw, req)
 
-		lumber.Trace(`
-Response:
---------------------------------------------------------------------------------
-%+v
-
-`, rw)
+		lumber.Trace(`[PULSE :: API] %v - [%v] %v %v %v(%s) - "User-Agent: %s", "X-Nanobox-Token: %s"`,
+			req.RemoteAddr, req.Proto, req.Method, req.RequestURI,
+			rw.Header().Get("status"), req.Header.Get("Content-Length"),
+			req.Header.Get("User-Agent"), req.Header.Get("X-Nanobox-Token"))
 	}
 }
 
