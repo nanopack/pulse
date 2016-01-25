@@ -48,8 +48,8 @@ func TestMain(m *testing.M) {
 }
 func TestInsert(t *testing.T) {
 	// define fake messages
-	msg1 := plexer.Message{Tags: []string{"cpu_used", "cpu_not_free"}, Data: "0.34"}
-	msg2 := plexer.Message{Tags: []string{"ram_used", "ram_not_free"}, Data: "0.43"}
+	msg1 := plexer.Message{ID: "cpu_used", Tags: []string{"cpu_not_free"}, Data: "0.34"}
+	msg2 := plexer.Message{ID: "ram_used", Tags: []string{"ram_not_free"}, Data: "0.43"}
 	messages := plexer.MessageSet{Tags: []string{"host:tester", "test0"}, Messages: []plexer.Message{msg1, msg2}}
 
 	// test inserting into influx
