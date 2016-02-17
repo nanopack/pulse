@@ -1,9 +1,9 @@
-[![pulse logo](http://nano-assets.gopagoda.io/readme-headers/pulse.png)](http://nanobox.io/open-source#pulse)
- [![Build Status](https://travis-ci.org/nanopack/pulse.svg)](https://travis-ci.org/nanopack/pulse)
+[![pulse logo](http://nano-assets.gopagoda.io/readme-headers/pulse.png)](http://nanobox.io/open-source#pulse)   
+[![Build Status](https://travis-ci.org/nanopack/pulse.svg)](https://travis-ci.org/nanopack/pulse)
 
 # Pulse
 
-Pulse is a stat collecting and publishing service. It serves historical stats over an http api, and live stats are sent to mist for live updates.
+Pulse is a stat collecting and publishing service. It serves historical stats over an http api while live stats are sent to mist for live updates.
 
 ## Status
 
@@ -11,8 +11,8 @@ Complete/Experimental
 
 ## Relay
 
-A pulse relay is a service that connects to pulse and advertises stats that are available for collection. A relay implementation is available in the pulse project and can be embedded in other projects.
-
+A pulse relay is a service that connects to pulse and advertises stats that are available for collection. A relay implementation is available in the pulse project and can be embedded in other projects.  
+For an [**example**](relay/README.md), look in the README for relay
 
 ### TCP pulse api
 The TCP api used to communicate between the pulse server and a relay is simple and is designed to be human readable and debuggable. It is newline delimited.
@@ -39,6 +39,18 @@ The TCP api used to communicate between the pulse server and a relay is simple a
 | `/services/{service}/stats/{stat}/hourly` | Grab hourly averages for the last day | nil | `[{"time":14463123000,"value":0.124}]` |
 | `/services/{service}/stats/{stat}/daily_peaks` | Grab combined 15 minute averages for the last week | nil | `{"16:15":0.1}`
 
+#### Example:
+Get 'ram_used' stat for 'web1' service
+```
+$ curl -k -H "X-NANOBOX-TOKEN: secret" https://127.0.0.1:8080/services/web1/stats/ram_used/hourly
+[{"time":1455665400000,"value":0.43448749999999997},{"time":1455666300000,"value":0.43753846153846154},{"time":1455667200000,"value":0.4414133333333333},{"time":1455667200000,"value":0.7366},{"time":1455668100000,"value":0.45486999999999994}]
+```
+Get 15 min average of 'ram_used' stat for 'web1' service
+```
+$ curl -k -H "X-NANOBOX-TOKEN: secret" https://127.0.0.1:8080/services/web1/stats/ram_used/daily_peaks
+{"16:30":0.43448749999999997,"16:45":0.43753846153846154,"17:0":1.1780133333333334,"17:15":0.45486999999999994}
+```
+
 ## Notes
 - If an override is specified for a stat, and a new machine comes online and connects, that override is **NOT** honored.
 - Pulse server does not actively connect to servers to have stats pushed to it, rather, it waits for stat collecting machines to connect and then requests certain stats on specific intervals.
@@ -46,6 +58,11 @@ The TCP api used to communicate between the pulse server and a relay is simple a
 ### Contributing
 
 Contributions to the pulse project are welcome and encouraged. Pulse is a [Nanobox](https://nanobox.io) project and contributions should follow the [Nanobox Contribution Process & Guidelines](https://docs.nanobox.io/contributing/).
+
+todo:
+   there may be a bug with continuous queries aggregating by host and service rather than just service  
+   there may also be a bug getting hourly stats that returns all aggregated stats  
+   there may also be a bug with daily peaks that adds the stat from different hosts' (maybe it needs to divide by number of hosts/instances with that stat)  
 
 ### Licence
 
