@@ -9,6 +9,40 @@ Pulse is a stat collecting and publishing service. It serves historical stats ov
 
 Complete/Experimental
 
+
+## Server
+### Usage:
+- `pulse [flags]`
+
+### Flags:
+```
+  -a, --aggregate_interval=15: Interval at which stats are aggregated
+  -c, --config_file="": Config file location for server
+  -H, --http_listen_address="127.0.0.1:8080": Http listen address
+  -i, --influx_address="127.0.0.1:8086": InfluxDB server address
+  -l, --log_level="INFO": Level at which to log
+  -m, --mist_address="": Mist server address
+  -p, --poll_interval=60: Interval to request stats from clients
+  -s, --server[=false]: Run as server
+  -S, --server_listen_address="127.0.0.1:3000": Server listen address
+  -t, --token="secret": Security token (recommend placing in config file)
+```
+
+### Config File Options:
+```json
+{
+  "server": false,
+  "server_listen_address": "127.0.0.1:3000",
+  "http_listen_address": "127.0.0.1:8080",
+  "influx_address": "127.0.0.1:8086",
+  "mist_address": "",
+  "log_level": "INFO",
+  "token": "secret",
+  "poll_interval": 60,
+  "aggregate_interval": 15
+}
+```
+
 ## Relay
 
 A pulse relay is a service that connects to pulse and advertises stats that are available for collection. A relay implementation is available in the pulse project and can be embedded in other projects.  
@@ -59,10 +93,10 @@ $ curl -k -H "X-NANOBOX-TOKEN: secret" https://127.0.0.1:8080/services/web1/stat
 
 Contributions to the pulse project are welcome and encouraged. Pulse is a [Nanobox](https://nanobox.io) project and contributions should follow the [Nanobox Contribution Process & Guidelines](https://docs.nanobox.io/contributing/).
 
-todo:
-   there may be a bug with continuous queries aggregating by host and service rather than just service  
-   there may also be a bug getting hourly stats that returns all aggregated stats  
-   there may also be a bug with daily peaks that adds the stat from different hosts' (maybe it needs to divide by number of hosts/instances with that stat)  
+**todo**:  
+- there may be a bug with continuous queries aggregating by host and service rather than just service  
+- there may also be a bug getting hourly stats that returns all aggregated stats  
+- there may also be a bug with daily peaks that adds the stat from different hosts' (maybe it needs to divide by number of hosts/instances with that stat)  
 
 ### Licence
 
