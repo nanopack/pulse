@@ -10,7 +10,7 @@ import (
 
 	"github.com/gorilla/pat"
 	"github.com/jcelliott/lumber"
-	"github.com/nanobox-io/nanoauth"
+	"github.com/nanobox-io/golang-nanoauth"
 	"github.com/spf13/viper"
 )
 
@@ -55,8 +55,8 @@ func (api *API) registerRoutes() (*pat.Router, error) {
 		rw.Write([]byte("pong"))
 	})
 
-	router.Get("/services/{service}/stats/{stat}/hourly", api.handleRequest(statRequest))
-	router.Get("/services/{service}/stats/{stat}/daily_peaks", api.handleRequest(combinedRequest))
+	router.Get("/hourly/{stat}", api.handleRequest(statRequest))
+	router.Get("/daily_peaks/{stat}", api.handleRequest(combinedRequest))
 
 	return router, nil
 }

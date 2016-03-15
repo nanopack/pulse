@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/jcelliott/lumber"
-	"github.com/nanopack/mist/core"
+	mist "github.com/nanopack/mist/clients"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -78,7 +78,7 @@ func serverStart() {
 	plex := plexer.NewPlexer()
 
 	if viper.GetString("mist_address") != "" {
-		mist, err := mist.NewRemoteClient(viper.GetString("mist_address"))
+		mist, err := mist.New(viper.GetString("mist_address"))
 		if err != nil {
 			lumber.Fatal("Mist failed to start - %v", err.Error())
 			os.Exit(1)
