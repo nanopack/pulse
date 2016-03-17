@@ -52,16 +52,16 @@ func main() {
   }
   defer relay.Close()
 
-  // add new cpu collector
+  // add new cpu collector for a container
   cpuCollector := pulse.NewPointCollector(cpuGetter)
-  if err := relay.AddCollector("cpu_used", []string{"service:web1"}, cpuCollector); err != nil {
+  if err := relay.AddCollector("container-cpu_used", []string{"","service:web1"}, cpuCollector); err != nil {
     fmt.Println(err)
     os.Exit(1)
   }
 
-  // add new ram collector
+  // a ram collector for the host
   ramCollector := pulse.NewPointCollector(ramGetter)
-  if err := relay.AddCollector("ram_used", []string{"service:web1"}, ramCollector); err != nil {
+  if err := relay.AddCollector("ram_used", nil, ramCollector); err != nil {
     fmt.Println(err)
     os.Exit(1)
   }

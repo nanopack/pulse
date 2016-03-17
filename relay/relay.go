@@ -147,7 +147,6 @@ func (relay *Relay) Info() map[string]float64 {
 	if relay.connected {
 		stats["_connected"] = 1
 	}
-
 	for collection, stat := range relay.collectors {
 		values := stat.collector.Collect()
 		for name, value := range values {
@@ -159,7 +158,6 @@ func (relay *Relay) Info() map[string]float64 {
 			}
 		}
 	}
-
 	return stats
 }
 

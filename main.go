@@ -74,6 +74,7 @@ func main() {
 }
 
 func serverStart() {
+	lumber.Level(lumber.LvlInt(viper.GetString("log_level")))
 
 	plex := plexer.NewPlexer()
 

@@ -38,7 +38,6 @@ func (api *API) Start() error {
 
 	//
 	lumber.Info("[PULSE :: API] Listening at %v\n", viper.GetString("http_listen_address"))
-
 	// blocking...
 	return nanoauth.ListenAndServeTLS(viper.GetString("http_listen_address"), viper.GetString("token"), routes)
 }
