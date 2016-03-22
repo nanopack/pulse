@@ -128,7 +128,7 @@ func (relay *Relay) runLoop(reader *bufio.Reader) {
 					case name == "":
 						results = append(results, stat+":"+formatted)
 					default:
-						results = append(results, stat+"-"+name+":"+formatted)
+						results = append(results, stat+"_"+name+":"+formatted)
 					}
 				}
 			}

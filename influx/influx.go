@@ -171,12 +171,13 @@ func KeepContinuousQueriesUpToDate() error {
 
 		// if columns changed, rebuild continuous query
 		if (currentQuery != newQuery) && columns != nil {
+			lumber.Trace("New Query: %+s\n", newQuery)
 			lumber.Trace("[PULSE :: INFLUX] Rebuilding continuous query...")
 			r, err := c.Query(client.NewQuery(`DROP CONTINUOUS QUERY aggregate ON statistics`, "statistics", "s"))
 			if err != nil {
 				fmt.Printf("ERROR: %+v, %+v\n", r, err)
 			}
-
+			lumber.Trace("New Query: %+s\n", newQuery)
 			r, err = c.Query(client.NewQuery(newQuery, "statistics", "s"))
 			if err != nil {
 				fmt.Printf("ERROR: %+v, %+v\n", r, err)

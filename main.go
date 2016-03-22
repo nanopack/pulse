@@ -39,6 +39,9 @@ func main() {
 				ccmd.HelpFunc()(ccmd, args)
 				return
 			}
+			viper.SetConfigFile(configFile)
+			viper.ReadInConfig()
+			lumber.Level(lumber.LvlInt(viper.GetString("log_level")))
 
 			serverStart()
 		},
@@ -66,15 +69,11 @@ func main() {
 
 	command.Flags().StringVarP(&configFile, "config_file", "c", "", "Config file location for server")
 
-	viper.SetConfigFile(configFile)
-	viper.ReadInConfig()
-	lumber.Level(lumber.LvlInt(viper.GetString("log_level")))
 
 	command.Execute()
 }
 
 func serverStart() {
-	lumber.Level(lumber.LvlInt(viper.GetString("log_level")))
 
 	plex := plexer.NewPlexer()
 
