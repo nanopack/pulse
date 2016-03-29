@@ -90,8 +90,9 @@ func getStats(req *http.Request) (*client.Result, error) {
 		if key == ":stat" {
 			continue
 		}
-		filters = append(filters, fmt.Sprintf("%s = '%s'", key, val))
+		filters = append(filters, fmt.Sprintf("%s = '%s'", key, val[0]))
 	}
+	fmt.Println(filters)
 	if len(filters) > 0 {
 		query = fmt.Sprintf("%s WHERE %s", query, strings.Join(filters, " AND "))
 	}
