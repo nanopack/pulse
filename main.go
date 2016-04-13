@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"fmt"
 	"time"
 
 	"github.com/jcelliott/lumber"
@@ -39,8 +40,13 @@ func main() {
 				ccmd.HelpFunc()(ccmd, args)
 				return
 			}
+			fmt.Println("configfile: ", configFile)
 			viper.SetConfigFile(configFile)
-			viper.ReadInConfig()
+			err := viper.ReadInConfig()
+			if err != nil {
+				fmt.Println("config err", err)
+			}
+			fmt.Println(viper.GetString("server_listen_address"))
 			lumber.Level(lumber.LvlInt(viper.GetString("log_level")))
 
 			serverStart()

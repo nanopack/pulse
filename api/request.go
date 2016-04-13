@@ -20,6 +20,26 @@ type (
 	}
 )
 
+func keyRequest(res http.ResponseWriter, req *http.Request) {
+	cols, err := influx.Query("SHOW FIELD KEYS FROM \"2.days\".\"metrics\"")
+	if err != nil {
+		panic(err)
+	}
+
+	columns := []string{}
+	for _, res := range cols.Results {
+		for _, series := range res.Series {
+			if series.Name == "metrics" {
+				for _, val := range series.Values {
+					columns = append(columns, val[0].(string))
+				}
+			}
+		}
+	}
+
+	writeBody(columns, res, http.StatusOK)
+}
+
 func statRequest(res http.ResponseWriter, req *http.Request) {
 	rec, err := getStats(req)
 	if err != nil {
