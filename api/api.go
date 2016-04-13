@@ -54,6 +54,9 @@ func (api *API) registerRoutes() (*pat.Router, error) {
 		rw.Write([]byte("pong"))
 	})
 
+	router.Get("/keys", api.handleRequest(keysRequest))
+	router.Get("/tags", api.handleRequest(tagsRequest))
+
 	router.Get("/hourly/{stat}", api.handleRequest(statRequest))
 	router.Get("/daily_peaks/{stat}", api.handleRequest(combinedRequest))
 

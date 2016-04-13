@@ -124,12 +124,10 @@ func (relay *Relay) runLoop(reader *bufio.Reader) {
 				}
 				for name, value := range tagCollector.collector.Collect() {
 					formatted := strconv.FormatFloat(value, 'f', 4, 64)
-					switch {
-					case name == "":
-						results = append(results, stat+":"+formatted)
-					default:
-						results = append(results, name+":"+formatted)
+					if name == "" {
+						name = stat
 					}
+					results = append(results, fmt.Sprintf("%s-%s:%s", stat, name, formatted))
 				}
 			}
 			response := fmt.Sprintf("got %s\n", strings.Join(results, ","))

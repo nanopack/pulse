@@ -20,15 +20,15 @@ type (
 	}
 )
 
-func keyRequest(res http.ResponseWriter, req *http.Request) {
-	cols, err := influx.Query("SHOW FIELD KEYS FROM \"2.days\".\"metrics\"")
+func keysRequest(res http.ResponseWriter, req *http.Request) {
+	cols, err := influx.Query("SHOW FIELD KEYS FROM \"2.days\".\"metrics\"",)
 	if err != nil {
 		panic(err)
 	}
 
 	columns := []string{}
-	for _, res := range cols.Results {
-		for _, series := range res.Series {
+	for _, result := range cols.Results {
+		for _, series := range result.Series {
 			if series.Name == "metrics" {
 				for _, val := range series.Values {
 					columns = append(columns, val[0].(string))
@@ -38,6 +38,27 @@ func keyRequest(res http.ResponseWriter, req *http.Request) {
 	}
 
 	writeBody(columns, res, http.StatusOK)
+}
+
+func tagsRequest(res http.ResponseWriter, req *http.Request) {
+	// check tags
+	groupBy, err := influx.Query("SHOW TAG KEYS FROM \"2.days\".\"metrics\"")
+	if err != nil {
+		panic(err)
+	}
+
+	group := []string{}
+	for _, result := range groupBy.Results {
+		for _, series := range result.Series {
+			if series.Name == "metrics" {
+				for _, val := range series.Values {
+					group = append(group, val[0].(string))
+				}
+			}
+		}
+	}	
+
+	writeBody(group, res, http.StatusOK)
 }
 
 func statRequest(res http.ResponseWriter, req *http.Request) {

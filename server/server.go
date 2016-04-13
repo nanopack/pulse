@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net"
 	"strings"
+	"fmt"
 
 	"github.com/jcelliott/lumber"
 
@@ -102,6 +103,7 @@ func handleConnection(conn net.Conn) {
 			}
 
 			for _, stat := range stats {
+				fmt.Println("stat", stat)
 				splitStat := strings.Split(stat, ":")
 				if len(splitStat) != 2 {
 					// i can only handle key value
@@ -110,17 +112,13 @@ func handleConnection(conn net.Conn) {
 
 				name := splitStat[0]
 				splitName := strings.Split(name, "-")
-
-				tags := []string{}
-				switch {
-				case clients[id].includes(name):
-					tags = clients[id].tagList(name)
-				case clients[id].includes(splitName[0]):
-					tags = clients[id].tagList(splitName[0])
+				if len(splitName) != 2 {
+					// the name didnt come in as collector-name
+					continue
 				}
-
+				tags := clients[id].tagList(splitName[0])
 				message := plexer.Message{
-					ID:   name,
+					ID:   splitName[1],
 					Tags: tags,
 					Data: splitStat[1],
 				}
@@ -134,13 +132,13 @@ func handleConnection(conn net.Conn) {
 				clients[id].add(split[1], []string{})
 				continue
 			}
-
 			split = strings.SplitN(split[1], ":", 2)
 			tags := strings.Split(split[1], ",")
 			if split[1] == "" {
 				tags = []string{}
 			}
 			clients[id].add(split[0], tags)
+
 		case "remove":
 			lumber.Trace("[PULSE :: SERVER] REMOVE: %v", split)
 			clients[id].remove(split[1])
