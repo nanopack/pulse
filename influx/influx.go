@@ -60,7 +60,7 @@ func Insert(messageSet plexer.MessageSet) error {
 		}
 		points = append(points, point)
 	}
-	return writePoints("statistics", "2.days", points)
+	return writePoints("statistics", "2_days", points)
 }
 
 func writePoints(database, retain string, points []*client.Point) error {
@@ -103,13 +103,13 @@ func KeepContinuousQueriesUpToDate() error {
 
 	for {
 		// get fields
-		cols, err := c.Query(client.NewQuery("SHOW FIELD KEYS FROM \"2.days\".\"metrics\"", "statistics", "s"))
+		cols, err := c.Query(client.NewQuery("SHOW FIELD KEYS FROM \"2_days\".\"metrics\"", "statistics", "s"))
 		if err != nil {
 			panic(err)
 		}
 
 		// check tags
-		groupBy, err := c.Query(client.NewQuery("SHOW TAG KEYS FROM \"2.days\".\"metrics\"", "statistics", "s"))
+		groupBy, err := c.Query(client.NewQuery("SHOW TAG KEYS FROM \"2_days\".\"metrics\"", "statistics", "s"))
 		if err != nil {
 			panic(err)
 		}
@@ -167,7 +167,7 @@ func KeepContinuousQueriesUpToDate() error {
 		}
 
 		// create new query string
-		newQuery := `CREATE CONTINUOUS QUERY aggregate ON statistics BEGIN SELECT ` + fmt.Sprintf(strings.Join(summary, ", ")) + ` INTO statistics."1.week".metrics FROM statistics."2.days".metrics GROUP BY time(` + strconv.Itoa(aggregate_interval) + `m), ` + fmt.Sprintf(strings.Join(group, ", ")) + ` END`
+		newQuery := `CREATE CONTINUOUS QUERY aggregate ON statistics BEGIN SELECT ` + fmt.Sprintf(strings.Join(summary, ", ")) + ` INTO statistics."1_week".metrics FROM statistics."2_days".metrics GROUP BY time(` + strconv.Itoa(aggregate_interval) + `m), ` + fmt.Sprintf(strings.Join(group, ", ")) + ` END`
 
 		// if columns changed, rebuild continuous query
 		if (currentQuery != newQuery) && columns != nil {

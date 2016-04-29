@@ -21,7 +21,7 @@ type (
 )
 
 func keysRequest(res http.ResponseWriter, req *http.Request) {
-	cols, err := influx.Query("SHOW FIELD KEYS FROM \"2.days\".\"metrics\"",)
+	cols, err := influx.Query("SHOW FIELD KEYS FROM \"2_days\".\"metrics\"",)
 	if err != nil {
 		panic(err)
 	}
@@ -42,7 +42,7 @@ func keysRequest(res http.ResponseWriter, req *http.Request) {
 
 func tagsRequest(res http.ResponseWriter, req *http.Request) {
 	// check tags
-	groupBy, err := influx.Query("SHOW TAG KEYS FROM \"2.days\".\"metrics\"")
+	groupBy, err := influx.Query("SHOW TAG KEYS FROM \"2_days\".\"metrics\"")
 	if err != nil {
 		panic(err)
 	}
@@ -125,7 +125,7 @@ func combinedRequest(res http.ResponseWriter, req *http.Request) {
 
 func getStats(req *http.Request) (*client.Result, error) {
 	stat := req.URL.Query().Get(":stat")
-	query := fmt.Sprintf(`select "%v" from "1.week".metrics`, stat)
+	query := fmt.Sprintf(`select "%v" from "1_week".metrics`, stat)
 	filters := []string{}
 	for key, val := range req.URL.Query() {
 		if key == ":stat" {

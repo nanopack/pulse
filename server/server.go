@@ -33,6 +33,8 @@ func Listen(address string, publisher Publisher) error {
 		return err
 	}
 
+	lumber.Info("[PULSE :: SERVER] Listening at %s...", address)
+
 	go func() {
 		defer serverSocket.Close()
 		// Continually listen for any incoming connections.

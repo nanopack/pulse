@@ -37,14 +37,14 @@ func (api *API) Start() error {
 	}
 
 	//
-	lumber.Info("[PULSE :: API] Listening at %v\n", viper.GetString("http_listen_address"))
+	lumber.Info("[PULSE :: API] Listening at %v...", viper.GetString("http_listen_address"))
 	// blocking...
 	return nanoauth.ListenAndServeTLS(viper.GetString("http_listen_address"), viper.GetString("token"), routes)
 }
 
 // registerRoutes
 func (api *API) registerRoutes() (*pat.Router, error) {
-	lumber.Debug("[PULSE :: API] Registering routes...\n")
+	lumber.Debug("[PULSE :: API] Registering routes...")
 
 	//
 	router := pat.New()
