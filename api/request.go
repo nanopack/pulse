@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"math"
 	"net/http"
-	"time"
 	"strings"
+	"time"
 
 	"github.com/influxdata/influxdb/client/v2"
 
@@ -21,7 +21,7 @@ type (
 )
 
 func keysRequest(res http.ResponseWriter, req *http.Request) {
-	cols, err := influx.Query("SHOW FIELD KEYS FROM \"2_days\".\"metrics\"",)
+	cols, err := influx.Query("SHOW FIELD KEYS FROM two_days.aggregate")
 	if err != nil {
 		panic(err)
 	}
@@ -29,11 +29,11 @@ func keysRequest(res http.ResponseWriter, req *http.Request) {
 	columns := []string{}
 	for _, result := range cols.Results {
 		for _, series := range result.Series {
-			if series.Name == "metrics" {
-				for _, val := range series.Values {
-					columns = append(columns, val[0].(string))
-				}
+			// if series.Name == "metrics" {
+			for _, val := range series.Values {
+				columns = append(columns, val[0].(string))
 			}
+			// }
 		}
 	}
 
@@ -42,7 +42,7 @@ func keysRequest(res http.ResponseWriter, req *http.Request) {
 
 func tagsRequest(res http.ResponseWriter, req *http.Request) {
 	// check tags
-	groupBy, err := influx.Query("SHOW TAG KEYS FROM \"2_days\".\"metrics\"")
+	groupBy, err := influx.Query("SHOW TAG KEYS FROM two_days.aggregate")
 	if err != nil {
 		panic(err)
 	}
@@ -50,13 +50,13 @@ func tagsRequest(res http.ResponseWriter, req *http.Request) {
 	group := []string{}
 	for _, result := range groupBy.Results {
 		for _, series := range result.Series {
-			if series.Name == "metrics" {
-				for _, val := range series.Values {
-					group = append(group, val[0].(string))
-				}
+			// if series.Name == "metrics" {
+			for _, val := range series.Values {
+				group = append(group, val[0].(string))
 			}
+			// }
 		}
-	}	
+	}
 
 	writeBody(group, res, http.StatusOK)
 }
@@ -125,7 +125,7 @@ func combinedRequest(res http.ResponseWriter, req *http.Request) {
 
 func getStats(req *http.Request) (*client.Result, error) {
 	stat := req.URL.Query().Get(":stat")
-	query := fmt.Sprintf(`select "%v" from "1_week".metrics`, stat)
+	query := fmt.Sprintf(`select "%v" from one_week.aggregate`, stat) // same as one_week./.*/
 	filters := []string{}
 	for key, val := range req.URL.Query() {
 		if key == ":stat" {

@@ -25,8 +25,8 @@ func TestMain(m *testing.M) {
 		// clean influx to test with (DO NOT RUN ON PRODUCTION)
 		"DROP   DATABASE statistics",
 		"CREATE DATABASE statistics",
-		`CREATE RETENTION POLICY "2_days" ON statistics DURATION 2d REPLICATION 1 DEFAULT`,
-		`CREATE RETENTION POLICY "1_week" ON statistics DURATION 1w REPLICATION 1`,
+		`CREATE RETENTION POLICY two_days ON statistics DURATION 2d REPLICATION 1 DEFAULT`,
+		`CREATE RETENTION POLICY one_week ON statistics DURATION 1w REPLICATION 1`,
 	}
 	for _, query := range queries {
 		_, err := influx.Query(query)
@@ -60,9 +60,10 @@ func TestInsert(t *testing.T) {
 
 func TestQuery(t *testing.T) {
 	// ensure insert worked
-	response, err := influx.Query(`Select * from "2_days".metrics`)
-	if err != nil {
+	response, err := influx.Query(`Select * from two_days./.*/`)
+	if err != nil || len(response.Results) < 1 {
 		t.Error("Failed to QUERY influx - ", err)
+		t.FailNow()
 	}
 
 	cpu_used := response.Results[0].Series[0].Values[0][1]
@@ -83,10 +84,12 @@ func TestContinuousQuery(t *testing.T) {
 	response, err := influx.Query(`SHOW CONTINUOUS QUERIES`)
 	if err != nil {
 		t.Error("Failed to QUERY influx - ", err)
+		t.FailNow()
 	}
 
 	cq := response.Results[0].Series[1].Values[0][1]
-	if cq != `CREATE CONTINUOUS QUERY aggregate ON statistics BEGIN SELECT mean(cpu_used) AS "cpu_used", mean(ram_used) AS "ram_used" INTO statistics."1_week".metrics FROM statistics."2_days".metrics GROUP BY time(1m), host END` {
-		t.Error("Failed to UPDATE CONTINUOUS QUERY influx")
+	if cq != "CREATE CONTINUOUS QUERY aggregate ON statistics BEGIN SELECT mean(cpu_used) AS cpu_used, mean(ram_used) AS ram_used INTO statistics.one_week.aggregate FROM statistics.two_days./.*/ GROUP BY time(1m), host, host END" {
+		t.Error("Failed to UPDATE CONTINUOUS QUERY influx - mismatched create statement")
+		fmt.Printf("%+q\n", cq)
 	}
 }

@@ -3,9 +3,9 @@ package server
 import (
 	"bufio"
 	"errors"
+	"fmt"
 	"net"
 	"strings"
-	"fmt"
 
 	"github.com/jcelliott/lumber"
 

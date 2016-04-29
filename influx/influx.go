@@ -54,13 +54,13 @@ func Insert(messageSet plexer.MessageSet) error {
 		// only one field per set of message tags.
 		field := map[string]interface{}{message.ID: value}
 		// create a point
-		point, err := client.NewPoint("metrics", tags, field, time.Now())
+		point, err := client.NewPoint(message.ID, tags, field, time.Now())
 		if err != nil {
 			continue
 		}
 		points = append(points, point)
 	}
-	return writePoints("statistics", "2_days", points)
+	return writePoints("statistics", "two_days", points)
 }
 
 func writePoints(database, retain string, points []*client.Point) error {
@@ -103,13 +103,13 @@ func KeepContinuousQueriesUpToDate() error {
 
 	for {
 		// get fields
-		cols, err := c.Query(client.NewQuery("SHOW FIELD KEYS FROM \"2_days\".\"metrics\"", "statistics", "s"))
+		cols, err := c.Query(client.NewQuery("SHOW FIELD KEYS FROM two_days./.*/", "statistics", "s"))
 		if err != nil {
 			panic(err)
 		}
 
 		// check tags
-		groupBy, err := c.Query(client.NewQuery("SHOW TAG KEYS FROM \"2_days\".\"metrics\"", "statistics", "s"))
+		groupBy, err := c.Query(client.NewQuery("SHOW TAG KEYS FROM two_days./.*/", "statistics", "s"))
 		if err != nil {
 			panic(err)
 		}
@@ -138,11 +138,11 @@ func KeepContinuousQueriesUpToDate() error {
 		group := []string{}
 		for _, res := range groupBy.Results {
 			for _, series := range res.Series {
-				if series.Name == "metrics" {
-					for _, val := range series.Values {
-						group = append(group, val[0].(string))
-					}
+				// if series.Name == "metrics" {
+				for _, val := range series.Values {
+					group = append(group, val[0].(string))
 				}
+				// }
 			}
 		}
 
@@ -150,11 +150,11 @@ func KeepContinuousQueriesUpToDate() error {
 		columns := []string{}
 		for _, res := range cols.Results {
 			for _, series := range res.Series {
-				if series.Name == "metrics" {
-					for _, val := range series.Values {
-						columns = append(columns, val[0].(string))
-					}
+				// if series.Name == "metrics" {
+				for _, val := range series.Values {
+					columns = append(columns, val[0].(string))
 				}
+				// }
 			}
 		}
 
@@ -167,7 +167,7 @@ func KeepContinuousQueriesUpToDate() error {
 		}
 
 		// create new query string
-		newQuery := `CREATE CONTINUOUS QUERY aggregate ON statistics BEGIN SELECT ` + fmt.Sprintf(strings.Join(summary, ", ")) + ` INTO statistics."1_week".metrics FROM statistics."2_days".metrics GROUP BY time(` + strconv.Itoa(aggregate_interval) + `m), ` + fmt.Sprintf(strings.Join(group, ", ")) + ` END`
+		newQuery := `CREATE CONTINUOUS QUERY aggregate ON statistics BEGIN SELECT ` + fmt.Sprintf(strings.Join(summary, ", ")) + ` INTO statistics.one_week.aggregate FROM statistics.two_days./.*/ GROUP BY time(` + strconv.Itoa(aggregate_interval) + `m), ` + fmt.Sprintf(strings.Join(group, ", ")) + ` END`
 
 		// if columns changed, rebuild continuous query
 		if (currentQuery != newQuery) && columns != nil {

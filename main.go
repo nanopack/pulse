@@ -36,6 +36,7 @@ var (
 		Run: startPulse,
 	}
 )
+
 func init() {
 	lumber.Level(lumber.LvlInt(viper.GetString("log_level")))
 }
@@ -87,7 +88,6 @@ func main() {
 
 	Pulse.Flags().StringVarP(&configFile, "config_file", "c", "", "Config file location for server")
 
-
 	Pulse.Execute()
 }
 
@@ -121,8 +121,8 @@ func serverStart() {
 
 	queries := []string{
 		"CREATE DATABASE statistics",
-		`CREATE RETENTION POLICY "2_days" ON statistics DURATION 2d REPLICATION 1 DEFAULT`,
-		`CREATE RETENTION POLICY "1_week" ON statistics DURATION 1w REPLICATION 1`,
+		`CREATE RETENTION POLICY two_days ON statistics DURATION 2d REPLICATION 1 DEFAULT`,
+		`CREATE RETENTION POLICY one_week ON statistics DURATION 1w REPLICATION 1`,
 	}
 
 	for _, query := range queries {

@@ -32,7 +32,7 @@ func main() {
 				}
 			}
 			fmt.Println("started")
-			<- time.After(10 * time.Hour)
+			<-time.After(10 * time.Hour)
 		},
 	}
 	cmd.Flags().StringVar(&host, "host", "127.0.0.1:3000", "connection to pulse")

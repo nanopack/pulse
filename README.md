@@ -94,6 +94,7 @@ $ curl -k -H "X-NANOBOX-TOKEN: secret" https://127.0.0.1:8080/services/web1/stat
 Contributions to the pulse project are welcome and encouraged. Pulse is a [Nanobox](https://nanobox.io) project and contributions should follow the [Nanobox Contribution Process & Guidelines](https://docs.nanobox.io/contributing/).
 
 **todo**:  
+- uniq the list of tags and fields in influx/influx.go:138 and possibly apply to api/request.go:24  
 - there may be a bug with continuous queries aggregating by host and service rather than just service  
 - there may also be a bug getting hourly stats that returns all aggregated stats  
 - there may also be a bug with daily peaks that adds the stat from different hosts' (maybe it needs to divide by number of hosts/instances with that stat)  
