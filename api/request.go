@@ -21,7 +21,7 @@ type (
 )
 
 func keysRequest(res http.ResponseWriter, req *http.Request) {
-	cols, err := influx.Query("SHOW FIELD KEYS FROM two_days.aggregate")
+	cols, err := influx.Query("SHOW FIELD KEYS FROM two_days.aggregate") // will only be populated after data is aggregated ~15m
 	if err != nil {
 		panic(err)
 	}
@@ -29,11 +29,9 @@ func keysRequest(res http.ResponseWriter, req *http.Request) {
 	columns := []string{}
 	for _, result := range cols.Results {
 		for _, series := range result.Series {
-			// if series.Name == "metrics" {
 			for _, val := range series.Values {
 				columns = append(columns, val[0].(string))
 			}
-			// }
 		}
 	}
 
@@ -50,11 +48,9 @@ func tagsRequest(res http.ResponseWriter, req *http.Request) {
 	group := []string{}
 	for _, result := range groupBy.Results {
 		for _, series := range result.Series {
-			// if series.Name == "metrics" {
 			for _, val := range series.Values {
 				group = append(group, val[0].(string))
 			}
-			// }
 		}
 	}
 
