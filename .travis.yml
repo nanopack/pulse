@@ -9,5 +9,11 @@ before_install:
   - sudo dpkg -i /tmp/influxdb.deb
   - sudo service influxdb start
   - sudo service kapacitor start
+
+services:
+  - influxdb
+  - kapacitor
+
 install: go get -t -v .
 script: go test -v -cover ./...
+
