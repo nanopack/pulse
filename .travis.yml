@@ -3,10 +3,10 @@ language: go
 go: 1.6
 
 before_install:
-	- wget https://dl.influxdata.com/kapacitor/releases/kapacitor_0.13.1_amd64.deb -O /tmp/kapacitor.deb
-	- sudo dpkg -i /tmp/kapacitor.deb
-	- wget https://dl.influxdata.com/influxdb/releases/influxdb_0.13.0_amd64.deb -O /tmp/influxdb.deb
-	- sudo dpkg -i /tmp/influxdb.deb
+  - wget https://dl.influxdata.com/kapacitor/releases/kapacitor_0.13.1_amd64.deb -O /tmp/kapacitor.deb
+  - sudo dpkg -i /tmp/kapacitor.deb
+  - wget https://dl.influxdata.com/influxdb/releases/influxdb_0.13.0_amd64.deb -O /tmp/influxdb.deb
+  - sudo dpkg -i /tmp/influxdb.deb
   - sudo service influxdb start
   - sudo service kapacitor start
 install: go get -t -v .
