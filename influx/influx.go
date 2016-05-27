@@ -89,7 +89,7 @@ func influxClient() (client.Client, error) {
 		return clientConn, nil
 	}
 	clientConn, err = client.NewHTTPClient(client.HTTPConfig{
-		Addr: viper.GetString("influx_address"),
+		Addr: viper.GetString("influx-address"),
 	})
 	return clientConn, err
 }
@@ -108,7 +108,7 @@ func KeepContinuousQueriesUpToDate() error {
 	if err != nil {
 		return err
 	}
-	var aggregate_interval = viper.GetInt("aggregate_interval")
+	var aggregateInterval = viper.GetInt("aggregate-interval")
 
 	for {
 		// get fields
@@ -180,7 +180,7 @@ func KeepContinuousQueriesUpToDate() error {
 		sort.Strings(group)
 
 		// create new query string
-		newQuery := `CREATE CONTINUOUS QUERY aggregate ON statistics BEGIN SELECT ` + fmt.Sprintf(strings.Join(summary, ", ")) + ` INTO statistics.one_week.aggregate FROM statistics.two_days./.*/ GROUP BY time(` + strconv.Itoa(aggregate_interval) + `m), ` + fmt.Sprintf(strings.Join(group, ", ")) + ` END`
+		newQuery := `CREATE CONTINUOUS QUERY aggregate ON statistics BEGIN SELECT ` + fmt.Sprintf(strings.Join(summary, ", ")) + ` INTO statistics.one_week.aggregate FROM statistics.two_days./.*/ GROUP BY time(` + strconv.Itoa(aggregateInterval) + `m), ` + fmt.Sprintf(strings.Join(group, ", ")) + ` END`
 
 		// if columns changed, rebuild continuous query
 		if (currentQuery != newQuery) && columns != nil {
@@ -198,6 +198,6 @@ func KeepContinuousQueriesUpToDate() error {
 			}
 		}
 
-		<-time.After(time.Duration(aggregate_interval) * time.Minute)
+		<-time.After(time.Duration(aggregateInterval) * time.Minute)
 	}
 }
