@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"time"
 
@@ -24,6 +25,7 @@ var (
 	mist_token         string
 	server_address     string
 	server             bool
+	version            bool
 	token              = "secret"
 	poll_interval      = 60
 	aggregate_interval = 15
@@ -35,6 +37,10 @@ var (
 
 		Run: startPulse,
 	}
+
+	// to be populated by go linker
+	tag string
+	commit string
 )
 
 func init() {
@@ -42,6 +48,11 @@ func init() {
 }
 
 func startPulse(ccmd *cobra.Command, args []string) {
+	if version {
+		fmt.Printf("pulse %s (%s)", tag, commit)
+		return
+	}
+
 	if configFile != "" {
 		viper.SetConfigFile(configFile)
 		err := viper.ReadInConfig()
@@ -87,6 +98,7 @@ func main() {
 	viper.BindPFlag("aggregate_interval", Pulse.Flags().Lookup("aggregate_interval"))
 
 	Pulse.Flags().StringVarP(&configFile, "config_file", "c", "", "Config file location for server")
+	Pulse.Flags().BoolVarP(&version, "version", "v", false, "Print version info and exit")
 
 	Pulse.Execute()
 }

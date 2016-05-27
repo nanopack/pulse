@@ -2,16 +2,23 @@
 set -e
 
 # try and use the correct MD5 lib (depending on user OS darwin/linux)
-MD5=$(which md5 || echo "$(which md5sum) | cut -f 1" )
+MD5=$(which md5 || which md5sum )
 
-# remove any previous builds that may have failed
-[ -e "./build" ] && \
-  echo "Cleaning up old builds..." && \
-  rm -rf "./build"
+# for versioning
+getCurrCommit() {
+  echo `git rev-parse HEAD | tr -d "[ \r\n\']"`
+}
+
+# for versioning
+getCurrTag() {
+  echo `git describe --always --tags --abbrev=0 | tr -d "[v\r\n]"`
+}
 
 # build pulse
 echo "Building PULSE and uploading it to 's3://tools.nanopack.io/pulse'"
-gox -osarch "darwin/amd64 linux/amd64 windows/amd64" -output="./build/{{.OS}}/{{.Arch}}/pulse"
+gox -ldflags="-X main.tag=$(getCurrTag) -X main.commit=$(getCurrCommit)" \
+  -osarch "linux/amd64" -output="./build/{{.OS}}/{{.Arch}}/pulse"
+  # -osarch "darwin/amd64 linux/amd64 windows/amd64" -output="./build/{{.OS}}/{{.Arch}}/pulse"
 
 # look through each os/arch/file and generate an md5 for each
 echo "Generating md5s..."
