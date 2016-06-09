@@ -51,6 +51,8 @@ func TestCreateUpdateTask(t *testing.T) {
 		t.Errorf("Failed to add task - %v", err)
 	}
 
+	// to make work with repo update from 4767348... TO 3003b83...
+	// requires using kapacitord 1.0.0-beta or nightlies.
 	task.Status = "disabled"
 	err = kapacitor.SetTask(task)
 	if err != nil {

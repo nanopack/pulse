@@ -98,7 +98,7 @@ func SetTask(task Task) error {
 		})
 		lumber.Trace("Task Created")
 	} else {
-		err = cli.UpdateTask(
+		_, err = cli.UpdateTask(
 			l,
 			client.UpdateTaskOptions{
 				Type:       Type,
