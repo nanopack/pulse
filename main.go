@@ -169,11 +169,11 @@ func startPulse(ccmd *cobra.Command, args []string) error {
 		return err
 	}
 	// begin polling the connected servers
-	pi := viper.GetInt("poll-interval")
-	if pi == 0 {
-		pi = 60
+	pollSec := viper.GetInt("poll-interval")
+	if pollSec == 0 {
+		pollSec = 60
 	}
-	go pulse.StartPolling(nil, nil, time.Duration(pi)*time.Second, nil)
+	go pulse.StartPolling(nil, nil, time.Duration(pollSec)*time.Second, nil)
 
 	queries := []string{
 		"CREATE DATABASE statistics",

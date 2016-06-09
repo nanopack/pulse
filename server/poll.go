@@ -15,24 +15,34 @@ import (
 func StartPolling(ids, tags []string, interval time.Duration, done chan struct{}) {
 	lumber.Trace("[PULSE :: SERVER] StartPolling...")
 	tick := time.Tick(interval)
+
+	// getstat allows us to poll without waiting for the tick
+	// since we can't send to receive only `tick` channel.
+	getstat := func() {
+		if ids == nil {
+			Poll(tags)
+			return
+		}
+
+		newIds := []string{}
+		for _, sid := range findIds(tags) {
+			for _, id := range ids {
+				if id == sid {
+					newIds = append(newIds, id)
+				}
+			}
+		}
+		command := "get " + strings.Join(tags, ",") + "\n"
+		sendAll(command, ids)
+	}
+
+	// fetch stat immediately (dont wait `interval`)
+	getstat()
+
 	for {
 		select {
 		case <-tick:
-			if ids == nil {
-				Poll(tags)
-				continue
-			}
-
-			newIds := []string{}
-			for _, sid := range findIds(tags) {
-				for _, id := range ids {
-					if id == sid {
-						newIds = append(newIds, id)
-					}
-				}
-			}
-			command := "get " + strings.Join(tags, ",") + "\n"
-			sendAll(command, ids)
+			getstat()
 		case <-done:
 			return
 		}
