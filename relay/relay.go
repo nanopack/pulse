@@ -164,8 +164,7 @@ func (relay *Relay) Info() map[string]float64 {
 
 // AddCollector adds a collector to relay
 func (relay *Relay) AddCollector(name string, tags []string, collector Collector) error {
-	// todo: test drawbacks of removing '-' from check
-	if name == "_connected" || strings.ContainsAny(name, ":,") {
+	if name == "_connected" || strings.ContainsAny(name, "-:,") {
 		lumber.Trace("[PULSE :: RELAY] Reserved name!")
 		return ReservedName
 	}

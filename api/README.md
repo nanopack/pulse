@@ -23,8 +23,8 @@ Pulse is a stat collecting and publishing service. It serves historical stats ov
 | **PUT** /alerts | Update a kapacitor alert | json alert object | json alert object |
 | **DELETE** /alerts/{alert} | Delete a kapacitor alert | nil | success message |
 
-`*`:reserved query parameters are 'limit' and '[verb](https://docs.influxdata.com/influxdb/v0.13/query_language/functions)', all others act as filters  
-`**`:reserved query parameters are '[verb](https://docs.influxdata.com/influxdb/v0.13/query_language/functions)', 'start', and 'stop', all others act as filters  
+`*`: reserved query parameters are 'limit' and '[verb](https://docs.influxdata.com/influxdb/v0.13/query_language/functions)', all others act as filters  
+`**`: reserved query parameters are '[verb](https://docs.influxdata.com/influxdb/v0.13/query_language/functions)', 'start', and 'stop', all others act as filters  
 
 **note:** The API requires a token to be passed for authentication by default and is configurable at server start (`--token`). The token is passed in as a custom header: `X-AUTH-TOKEN`.  
 
@@ -82,7 +82,7 @@ $ curl http://localhost:8080/keys
 ```
 
 #### add alert for cpu_used to trigger critical alert to localhost/alert if cpu_used is > 80 for 30s
-```
+```sh
 $ curl http://localhost:8080/alerts -d '{
   "tags": {"host":"abcd"},
   "metric": "cpu_used",
@@ -95,7 +95,7 @@ $ curl http://localhost:8080/alerts -d '{
 ```
 
 #### delete alert for cpu_used to trigger critical alert to localhost/alert if cpu_used is > 80 for 30s
-```
+```sh
 $ curl http://localhost:8080/alerts/cpu_used -X DELETE
 # {"msg":"Success"}
 ```

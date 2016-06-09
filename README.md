@@ -17,7 +17,7 @@ Usage:
 
 Flags:
   -a, --aggregate-interval int         Interval at which stats are aggregated (default 15)
-  -c, --config-file string              Config file location for server
+  -c, --config-file string             Config file location for server
   -H, --http-listen-address string     Http listen address (default "127.0.0.1:8080")
   -i, --influx-address string          InfluxDB server address (default "http://127.0.0.1:8086")
   -I, --insecure                       Run insecure (default true)
@@ -69,8 +69,8 @@ Flags:
 | **PUT** /alerts | Update a kapacitor alert | json alert object | json alert object |
 | **DELETE** /alerts/{alert} | Delete a kapacitor alert | nil | success message |
 
-`*`:reserved query parameters are 'limit' and 'verb', all others act as filters  
-`**`:reserved query parameters are 'verb', 'start', and 'stop', all others act as filters  
+`*`: reserved query parameters are 'limit' and 'verb', all others act as filters  
+`**`: reserved query parameters are 'verb', 'start', and 'stop', all others act as filters  
 
 **note:** The API requires a token to be passed for authentication by default and is configurable at server start (`--token`). The token is passed in as a custom header: `X-AUTH-TOKEN`.  
 
