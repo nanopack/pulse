@@ -3,6 +3,7 @@ package relay
 import ()
 
 type (
+	// Collector is a stat to be collected
 	Collector interface {
 		Collect() map[string]float64
 	}

@@ -7,9 +7,11 @@ import (
 	"github.com/jcelliott/lumber"
 )
 
-// StartPolling(nil, nil, 60, nil)
-// StartPolling(nil, []string{"cpu"}, 1, ch)
-// StartPolling([]string{"computer1", "computer2"}, []string{"cpu"}, 1, ch)
+// StartPolling polls clients at preconfigured interval.
+// Examples:
+//  StartPolling(nil, nil, 60, nil)
+//  StartPolling(nil, []string{"cpu"}, 1, ch)
+//  StartPolling([]string{"computer1", "computer2"}, []string{"cpu"}, 1, ch)
 func StartPolling(ids, tags []string, interval time.Duration, done chan struct{}) {
 	lumber.Trace("[PULSE :: SERVER] StartPolling...")
 	tick := time.Tick(interval)
@@ -37,6 +39,7 @@ func StartPolling(ids, tags []string, interval time.Duration, done chan struct{}
 	}
 }
 
+// Poll polls based on tags
 func Poll(tags []string) {
 	lumber.Trace("[PULSE :: SERVER] Poll...")
 	if tags == nil {
@@ -48,6 +51,7 @@ func Poll(tags []string) {
 	sendAll(command, ids)
 }
 
+// PollAll polls all clients for registered collectors(stats to be collected)
 func PollAll() {
 	lumber.Trace("[PULSE :: SERVER] PollAll...")
 	for _, client := range clients {

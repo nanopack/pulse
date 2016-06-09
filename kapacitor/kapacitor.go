@@ -1,3 +1,4 @@
+// Package kapacitor provides the means for alerting if a stat exceeds a threshold.
 package kapacitor
 
 // todo: store configured alerts
@@ -43,7 +44,7 @@ func Init() error {
 		URL:                viper.GetString("kapacitor-address"),
 		Timeout:            5 * time.Second,
 		UserAgent:          "PulseClient",
-		InsecureSkipVerify: viper.GetBool("insecure"),
+		InsecureSkipVerify: true, // todo: maybe set back to `viper.GetBool("insecure")`
 	})
 	if err != nil {
 		return fmt.Errorf("Failed to create new client! - %v", err)

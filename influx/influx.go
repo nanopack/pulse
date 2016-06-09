@@ -1,3 +1,4 @@
+// Package influx provides the backend for storing stats.
 package influx
 
 import (
@@ -17,6 +18,8 @@ import (
 var clientConn client.Client
 
 func Query(sql string) (*client.Response, error) {
+	lumber.Trace("[PULSE :: INFLUX] Querying influx: '%v'...", sql)
+
 	c, err := influxClient()
 	if err != nil {
 		return nil, err
@@ -61,7 +64,7 @@ func Insert(messageSet plexer.MessageSet) error {
 		}
 		points = append(points, point)
 	}
-	return writePoints("statistics", "two_days", points)
+	return writePoints("statistics", "one_day", points)
 }
 
 func writePoints(database, retain string, points []*client.Point) error {
@@ -114,7 +117,7 @@ func KeepContinuousQueriesUpToDate() error {
 		// get fields
 		// todo: maybe rather than `/.*/` use `/([^a][^g][^g][^r][^e][^g][^a][^t][^e]).*/`
 		// or do a `show measurements` and skip 'aggregate' or `SHOW MEASUREMENTS WITH MEASUREMENT =~ /([^a][^g][^g][^r][^e][^g][^a][^t][^e]).*/`
-		cols, err := c.Query(client.NewQuery("SHOW FIELD KEYS", "statistics", "s")) // equivalent to including `FROM two_days./.*/`
+		cols, err := c.Query(client.NewQuery("SHOW FIELD KEYS", "statistics", "s")) // equivalent to including `FROM one_day./.*/`
 		if err != nil {
 			panic(err)
 		}
@@ -180,7 +183,7 @@ func KeepContinuousQueriesUpToDate() error {
 		sort.Strings(group)
 
 		// create new query string
-		newQuery := `CREATE CONTINUOUS QUERY aggregate ON statistics BEGIN SELECT ` + fmt.Sprintf(strings.Join(summary, ", ")) + ` INTO statistics.one_week.aggregate FROM statistics.two_days./.*/ GROUP BY time(` + strconv.Itoa(aggregateInterval) + `m), ` + fmt.Sprintf(strings.Join(group, ", ")) + ` END`
+		newQuery := `CREATE CONTINUOUS QUERY aggregate ON statistics BEGIN SELECT ` + fmt.Sprintf(strings.Join(summary, ", ")) + ` INTO statistics.one_week.aggregate FROM statistics.one_day./.*/ GROUP BY time(` + strconv.Itoa(aggregateInterval) + `m), ` + fmt.Sprintf(strings.Join(group, ", ")) + ` END`
 
 		// if columns changed, rebuild continuous query
 		if (currentQuery != newQuery) && columns != nil {

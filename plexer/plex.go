@@ -1,3 +1,5 @@
+// Package plexer provides the means to live publish or store stats. In pulse,
+// influx is a BatchPublisher, and mist is a SinglePublisher.
 package plexer
 
 import (

@@ -2,16 +2,15 @@
 // Unauthorized copying of this file, via any medium is strictly prohibited
 // Proprietary and confidential
 
+// Package api provides a restful interface to view aggregated stats as well as manage alerts.
 package api
 
 //
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"net/http"
-	"regexp"
 
 	"github.com/gorilla/pat"
 	"github.com/jcelliott/lumber"
@@ -64,54 +63,44 @@ func registerRoutes() (*pat.Router, error) {
 		rw.Write([]byte("pong"))
 	})
 
-	router.Get("/keys", handleRequest(keysRequest))
-	router.Get("/tags", handleRequest(tagsRequest))
+	router.Get("/keys", keysRequest)
+	router.Get("/tags", tagsRequest)
 
-	router.Get("/hourly/{stat}", handleRequest(statRequest))
-	router.Get("/daily_peaks/{stat}", handleRequest(combinedRequest))
+	router.Get("/latest/{stat}", latestStat)
+	router.Get("/hourly/{stat}", hourlyStat)
+	router.Get("/daily/{stat}", dailyStat)
+	router.Get("/daily_peaks/{stat}", dailyStat)
 
 	// only expose alert routes if alerting configured
 	if viper.GetString("kapacitor-address") != "" {
 		// todo: maybe get and list tasks from kapacitor
-		router.Post("/alerts", handleRequest(setAlert))
-		router.Put("/alerts", handleRequest(setAlert))
-		router.Delete("/alerts/{id}", handleRequest(deleteAlert))
+		router.Post("/alerts", setAlert)
+		router.Put("/alerts", setAlert)
+		router.Delete("/alerts/{id}", deleteAlert)
 	}
 
 	return router, nil
 }
 
-// handleRequest
-func handleRequest(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
-	return func(rw http.ResponseWriter, req *http.Request) {
-
-		//
-		fn(rw, req)
-
-		// must be after req returns
-		getStatus := func(trw http.ResponseWriter) string {
-			r, _ := regexp.Compile("status:([0-9]*)")
-			return r.FindStringSubmatch(fmt.Sprintf("%+v", trw))[1]
-		}
-
-		getWrote := func(trw http.ResponseWriter) string {
-			r, _ := regexp.Compile("written:([0-9]*)")
-			return r.FindStringSubmatch(fmt.Sprintf("%+v", trw))[1]
-		}
-
-		lumber.Debug(`%v - [%v] %v %v %v(%s) - "User-Agent: %s"`,
-			req.RemoteAddr, req.Proto, req.Method, req.RequestURI,
-			getStatus(rw), getWrote(rw), // %v(%s)
-			req.Header.Get("User-Agent"))
-	}
-}
-
 // writeBody
-func writeBody(v interface{}, rw http.ResponseWriter, status int) error {
+func writeBody(v interface{}, rw http.ResponseWriter, status int, req *http.Request) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
 	}
+
+	// print the error only if there is one
+	var msg map[string]string
+	json.Unmarshal(b, &msg)
+
+	var errMsg string
+	if msg["error"] != "" {
+		errMsg = msg["error"]
+	}
+
+	lumber.Debug(`[PULSE :: ACCESS] %v - [%v] %v %v %v - "User-Agent: %s" %s`,
+		req.RemoteAddr, req.Proto, req.Method, req.RequestURI,
+		status, req.Header.Get("User-Agent"), errMsg)
 
 	rw.Header().Set("Content-Type", "application/json")
 	rw.WriteHeader(status)

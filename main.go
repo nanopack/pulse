@@ -1,3 +1,32 @@
+// Pulse is a stat collecting and publishing service. It serves historical
+// stats over an http api while live stats are sent to mist for live updates.
+//
+// Usage
+//
+// To start pulse as a server, simply run (with influx running locally):
+//
+//  pulse -s
+//
+// For more specific usage information, refer to the help doc `pulse -h`:
+//  Usage:
+//    pulse [flags]
+//
+//  Flags:
+//    -a, --aggregate-interval int         Interval at which stats are aggregated (default 15)
+//    -c, --config-file string              Config file location for server
+//    -H, --http-listen-address string     Http listen address (default "127.0.0.1:8080")
+//    -i, --influx-address string          InfluxDB server address (default "http://127.0.0.1:8086")
+//    -I, --insecure                       Run insecure (default true)
+//    -k, --kapacitor-address string       Kapacitor server address (http://127.0.0.1:9092)
+//    -l, --log-level string               Level at which to log (default "INFO")
+//    -m, --mist-address string            Mist server address
+//    -M, --mist-token string              Mist server token
+//    -p, --poll-interval int              Interval to request stats from clients (default 60)
+//    -s, --server                         Run as server
+//    -S, --server-listen-address string   Server listen address (default "127.0.0.1:3000")
+//    -t, --token string                   Security token (recommend placing in config file) (default "secret")
+//    -v, --version                        Print version info and exit
+//
 package main
 
 import (
@@ -63,7 +92,7 @@ func init() {
 	viper.BindPFlag("kapacitor-address", Pulse.Flags().Lookup("kapacitor-address"))
 	Pulse.Flags().StringP("mist-address", "m", mistAddress, "Mist server address")
 	viper.BindPFlag("mist-address", Pulse.Flags().Lookup("mist-address"))
-	Pulse.Flags().StringP("mist-token", "M", mistToken, "Mist server address")
+	Pulse.Flags().StringP("mist-token", "M", mistToken, "Mist server token")
 	viper.BindPFlag("mist-token", Pulse.Flags().Lookup("mist-token"))
 	Pulse.Flags().StringP("log-level", "l", logLevel, "Level at which to log")
 	viper.BindPFlag("log-level", Pulse.Flags().Lookup("log-level"))
@@ -79,7 +108,7 @@ func init() {
 	Pulse.Flags().IntP("aggregate-interval", "a", aggregateInterval, "Interval at which stats are aggregated")
 	viper.BindPFlag("aggregate-interval", Pulse.Flags().Lookup("aggregate-interval"))
 
-	Pulse.Flags().StringVarP(&configFile, "configFile", "c", configFile, "Config file location for server")
+	Pulse.Flags().StringVarP(&configFile, "config-file", "c", configFile, "Config file location for server")
 	Pulse.Flags().BoolVarP(&version, "version", "v", version, "Print version info and exit")
 
 	lumber.Level(lumber.LvlInt(viper.GetString("log-level")))
@@ -148,7 +177,7 @@ func startPulse(ccmd *cobra.Command, args []string) error {
 
 	queries := []string{
 		"CREATE DATABASE statistics",
-		`CREATE RETENTION POLICY two_days ON statistics DURATION 2d REPLICATION 1 DEFAULT`,
+		`CREATE RETENTION POLICY one_day ON statistics DURATION 8h REPLICATION 1 DEFAULT`,
 		`CREATE RETENTION POLICY one_week ON statistics DURATION 1w REPLICATION 1`,
 	}
 

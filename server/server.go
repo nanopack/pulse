@@ -1,9 +1,10 @@
+// Package server handles the tcp socket api for interacting with clients(relays).
+// It also handles polling clients based on registered tags.
 package server
 
 import (
 	"bufio"
 	"errors"
-	"fmt"
 	"net"
 	"strings"
 
@@ -21,6 +22,7 @@ type (
 	Publisher func(plexer.MessageSet) error
 )
 
+// Listen starts the pulse tcp socket api (stats)
 func Listen(address string, publisher Publisher) error {
 	if publisher == nil {
 		return MissingPublisher
@@ -53,6 +55,7 @@ func Listen(address string, publisher Publisher) error {
 	}()
 	return nil
 }
+
 func handleConnection(conn net.Conn) {
 	defer conn.Close()
 	r := bufio.NewReader(conn)
@@ -105,7 +108,6 @@ func handleConnection(conn net.Conn) {
 			}
 
 			for _, stat := range stats {
-				fmt.Println("stat", stat)
 				splitStat := strings.Split(stat, ":")
 				if len(splitStat) != 2 {
 					// i can only handle key value

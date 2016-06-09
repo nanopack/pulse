@@ -10,22 +10,26 @@ Pulse is a stat collecting and publishing service. It serves historical stats ov
 Complete/Experimental
 
 
-## Server
-### Usage:
-- `pulse [flags]`
+## Usage
 
-### Flags:
+Simply running `pulse -s` will start pulse with the default config options.
+`pulse -h` or `pulse --help` will show more detailed usage and config options:
+
 ```
-  -a, --aggregateInterval int          Interval at which stats are aggregated (default 15)
-  -c, --configFile string              Config file location for server
+Usage:
+  pulse [flags]
+
+Flags:
+  -a, --aggregate-interval int         Interval at which stats are aggregated (default 15)
+  -c, --config-file string              Config file location for server
   -H, --http-listen-address string     Http listen address (default "127.0.0.1:8080")
   -i, --influx-address string          InfluxDB server address (default "http://127.0.0.1:8086")
   -I, --insecure                       Run insecure (default true)
   -k, --kapacitor-address string       Kapacitor server address (http://127.0.0.1:9092)
   -l, --log-level string               Level at which to log (default "INFO")
   -m, --mist-address string            Mist server address
-  -M, --mist-token string              Mist server address
-  -p, --pollInterval int               Interval to request stats from clients (default 60)
+  -M, --mist-token string              Mist server token
+  -p, --poll-interval int              Interval to request stats from clients (default 60)
   -s, --server                         Run as server
   -S, --server-listen-address string   Server listen address (default "127.0.0.1:3000")
   -t, --token string                   Security token (recommend placing in config file) (default "secret")
@@ -42,12 +46,74 @@ Complete/Experimental
   "kapacitor-address": "http://127.0.0.1:9092",
   "insecure": true,
   "mist-address": "",
+  "mist-token": "",
   "log-level": "INFO",
   "token": "secret",
   "poll-interval": 60,
   "aggregate-interval": 15
 }
 ```
+
+
+## API
+
+| Route | Description | Output |
+| --- | --- | --- | --- |
+| **GET** /keys | Returns list of stats being recorded | string array |
+| **GET** /tags | Returns list of filterable tags | string array |
+| **GET** /latest/{stat}* | Returns latest stat (averages if multiple filters applied) | json stat object |
+| **GET** /hourly/{stat}** | Returns hourly averages for stat | json array of stat objects |
+| **GET** /daily/{stat}** | Returns average for stat at the same daily time | string map |
+
+**ALERTS** (requires "kapacitor-address" to be configured)
+| Route | Description | Payload | Output |
+| **POST** /alerts | Add a kapacitor alert | json alert object | json alert object |
+| **PUT** /alerts | Update a kapacitor alert | json alert object | json alert object |
+| **DELETE** /alerts/{alert} | Delete a kapacitor alert | nil | success message |
+
+*:reserved query parameters are 'limit' and 'verb', all others act as filters
+**:reserved query parameters are 'verb', 'start', and 'stop', all others act as filters
+
+**note:** The API requires a token to be passed for authentication by default and is configurable at server start (`--token`). The token is passed in as a custom header: `X-AUTH-TOKEN`.
+
+For examples, see [the api's readme](api/README.md)
+
+
+## Data Types
+### Stat Object
+json:
+```json
+{
+  "time": 1465419600,
+  "value": 0.75
+}
+```
+
+Fields:
+- **time**: Unix epoch timestamp of stat
+- **value**: Numeric value of stat
+
+### Alert Object
+json:
+```json
+{
+  "tags": {"host":"abc"},
+  "metric": "cpu_used",
+  "level": "crit",
+  "threshold": 80,
+  "duration": "30s",
+  "post": "http://127.0.0.1/alert"
+}
+```
+
+Fields:
+- **tags**: Populates the WHERE
+- **metric**: Stat to track
+- **level**: Alert level (info, warn, crit)
+- **threshold**: Limit that alert is triggered at
+- **duration**: How far back to average (5m)
+- **post**: Api to hit when alert is triggered
+
 
 ## Relay
 
@@ -71,40 +137,22 @@ The TCP api used to communicate between the pulse server and a relay is simple a
 | `flush` | Clear all current values from the stat collectors | `ok` |
 | `override {duration} {tag:interval}` | for `duration` seconds, bump the collection interval from the default to `interval` for each `tag:interval` | `ok` |
 
-
-## Routes
-
-| Url | Description | Payload | Output |
-| --- | --- | --- | --- |
-| `/services/{service}/stats/{stat}/hourly` | Grab hourly averages for the last day | nil | `[{"time":14463123000,"value":0.124}]` |
-| `/services/{service}/stats/{stat}/daily_peaks` | Grab combined 15 minute averages for the last week | nil | `{"16:15":0.1}`
-
-#### Example:
-Get 'ram_used' stat for 'web1' service
-```
-$ curl -k -H "X-NANOBOX-TOKEN: secret" https://127.0.0.1:8080/services/web1/stats/ram_used/hourly
-[{"time":1455665400000,"value":0.43448749999999997},{"time":1455666300000,"value":0.43753846153846154},{"time":1455667200000,"value":0.4414133333333333},{"time":1455667200000,"value":0.7366},{"time":1455668100000,"value":0.45486999999999994}]
-```
-Get 15 min average of 'ram_used' stat for 'web1' service
-```
-$ curl -k -H "X-NANOBOX-TOKEN: secret" https://127.0.0.1:8080/services/web1/stats/ram_used/daily_peaks
-{"16:30":0.43448749999999997,"16:45":0.43753846153846154,"17:0":1.1780133333333334,"17:15":0.45486999999999994}
-```
-
-## Notes
+#### Notes
 - If an override is specified for a stat, and a new machine comes online and connects, that override is **NOT** honored.
 - Pulse server does not actively connect to servers to have stats pushed to it, rather, it waits for stat collecting machines to connect and then requests certain stats on specific intervals.
 
-### Contributing
+
+## Contributing
 
 Contributions to the pulse project are welcome and encouraged. Pulse is a [Nanobox](https://nanobox.io) project and contributions should follow the [Nanobox Contribution Process & Guidelines](https://docs.nanobox.io/contributing/).
 
 **todo**:
+- extend alert id to be more unique for using same stat with multiple tags
+- verify hourly/daily verb implementation and multiple filters works as expected
 - there may be a bug with continuous queries aggregating by host and service rather than just service
-- there may also be a bug getting hourly stats that returns all aggregated stats
-- there may also be a bug with daily peaks that adds the stat from different hosts' (maybe it needs to divide by number of hosts/instances with that stat)
 
-### Licence
+
+## Licence
 
 Mozilla Public License Version 2.0
 
