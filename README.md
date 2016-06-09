@@ -1,18 +1,14 @@
-[![pulse logo](http://nano-assets.gopagoda.io/readme-headers/pulse.png)](http://nanobox.io/open-source#pulse)
+[![pulse logo](http://nano-assets.gopagoda.io/readme-headers/pulse.png)](http://nanobox.io/open-source#pulse)  
 [![Build Status](https://travis-ci.org/nanopack/pulse.svg)](https://travis-ci.org/nanopack/pulse)
 
 # Pulse
 
 Pulse is a stat collecting and publishing service. It serves historical stats over an http api while live stats are sent to mist for live updates.
 
-## Status
-
-Complete/Experimental
-
 
 ## Usage
 
-Simply running `pulse -s` will start pulse with the default config options.
+Simply running `pulse -s` will start pulse with the default config options.  
 `pulse -h` or `pulse --help` will show more detailed usage and config options:
 
 ```
@@ -58,25 +54,27 @@ Flags:
 ## API
 
 | Route | Description | Output |
-| --- | --- | --- | --- |
+| --- | --- | --- |
 | **GET** /keys | Returns list of stats being recorded | string array |
 | **GET** /tags | Returns list of filterable tags | string array |
 | **GET** /latest/{stat}* | Returns latest stat (averages if multiple filters applied) | json stat object |
 | **GET** /hourly/{stat}** | Returns hourly averages for stat | json array of stat objects |
 | **GET** /daily/{stat}** | Returns average for stat at the same daily time | string map |
 
-**ALERTS** (requires "kapacitor-address" to be configured)
+**ALERTS** (requires "kapacitor-address" to be configured)  
+
 | Route | Description | Payload | Output |
+| --- | --- | --- | --- |
 | **POST** /alerts | Add a kapacitor alert | json alert object | json alert object |
 | **PUT** /alerts | Update a kapacitor alert | json alert object | json alert object |
 | **DELETE** /alerts/{alert} | Delete a kapacitor alert | nil | success message |
 
-*:reserved query parameters are 'limit' and 'verb', all others act as filters
-**:reserved query parameters are 'verb', 'start', and 'stop', all others act as filters
+`*`:reserved query parameters are 'limit' and 'verb', all others act as filters  
+`**`:reserved query parameters are 'verb', 'start', and 'stop', all others act as filters  
 
-**note:** The API requires a token to be passed for authentication by default and is configurable at server start (`--token`). The token is passed in as a custom header: `X-AUTH-TOKEN`.
+**note:** The API requires a token to be passed for authentication by default and is configurable at server start (`--token`). The token is passed in as a custom header: `X-AUTH-TOKEN`.  
 
-For examples, see [the api's readme](api/README.md)
+For examples, see [the api's readme](api/README.md).
 
 
 ## Data Types
@@ -117,8 +115,9 @@ Fields:
 
 ## Relay
 
-A pulse relay is a service that connects to pulse and advertises stats that are available for collection. A relay implementation is available in the pulse project and can be embedded in other projects.
-For an [**example**](relay/README.md), look in the README for relay
+A pulse relay is a service that connects to pulse and advertises stats that are available for collection. A relay implementation is available in the pulse project and can be embedded in other projects.  
+
+For an [**example**](relay/README.md), look in the README for relay.
 
 ### TCP pulse api
 The TCP api used to communicate between the pulse server and a relay is simple and is designed to be human readable and debuggable. It is newline delimited.
@@ -146,7 +145,7 @@ The TCP api used to communicate between the pulse server and a relay is simple a
 
 Contributions to the pulse project are welcome and encouraged. Pulse is a [Nanobox](https://nanobox.io) project and contributions should follow the [Nanobox Contribution Process & Guidelines](https://docs.nanobox.io/contributing/).
 
-**todo**:
+#### TODO
 - extend alert id to be more unique for using same stat with multiple tags
 - verify hourly/daily verb implementation and multiple filters works as expected
 - there may be a bug with continuous queries aggregating by host and service rather than just service

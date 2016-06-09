@@ -1,4 +1,4 @@
-[![pulse logo](http://nano-assets.gopagoda.io/readme-headers/pulse.png)](http://nanobox.io/open-source#pulse)
+[![pulse logo](http://nano-assets.gopagoda.io/readme-headers/pulse.png)](http://nanobox.io/open-source#pulse)  
 [![Build Status](https://travis-ci.org/nanopack/pulse.svg)](https://travis-ci.org/nanopack/pulse)
 
 # Pulse
@@ -8,23 +8,25 @@ Pulse is a stat collecting and publishing service. It serves historical stats ov
 ## API
 
 | Route | Description | Output |
-| --- | --- | --- | --- |
+| --- | --- | --- |
 | **GET** /keys | Returns list of stats being recorded | string array |
 | **GET** /tags | Returns list of filterable tags | string array |
 | **GET** /latest/{stat}* | Returns latest stat (averages if multiple filters applied) | json stat object |
 | **GET** /hourly/{stat}** | Returns hourly averages for stat | json array of stat objects |
 | **GET** /daily/{stat}** | Returns average for stat at the same daily time | string map |
 
-**ALERTS** (requires "kapacitor-address" to be configured)
+**ALERTS** (requires "kapacitor-address" to be configured)  
+
 | Route | Description | Payload | Output |
+| --- | --- | --- | --- |
 | **POST** /alerts | Add a kapacitor alert | json alert object | json alert object |
 | **PUT** /alerts | Update a kapacitor alert | json alert object | json alert object |
 | **DELETE** /alerts/{alert} | Delete a kapacitor alert | nil | success message |
 
-*:reserved query parameters are 'limit' and '[verb](https://docs.influxdata.com/influxdb/v0.13/query_language/functions)', all others act as filters
-**:reserved query parameters are '[verb](https://docs.influxdata.com/influxdb/v0.13/query_language/functions)', 'start', and 'stop', all others act as filters
+`*`:reserved query parameters are 'limit' and '[verb](https://docs.influxdata.com/influxdb/v0.13/query_language/functions)', all others act as filters  
+`**`:reserved query parameters are '[verb](https://docs.influxdata.com/influxdb/v0.13/query_language/functions)', 'start', and 'stop', all others act as filters  
 
-**note:** The API requires a token to be passed for authentication by default and is configurable at server start (`--token`). The token is passed in as a custom header: `X-AUTH-TOKEN`.
+**note:** The API requires a token to be passed for authentication by default and is configurable at server start (`--token`). The token is passed in as a custom header: `X-AUTH-TOKEN`.  
 
 
 ## Usage Example:
