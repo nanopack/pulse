@@ -54,7 +54,7 @@ func main() {
 
   // add new cpu collector for a container
   cpuCollector := pulse.NewPointCollector(cpuGetter)
-  if err := relay.AddCollector("container-cpu_used", []string{"","service:web1"}, cpuCollector); err != nil {
+  if err := relay.AddCollector("cpu_used", []string{"","service:web1"}, cpuCollector); err != nil {
     fmt.Println(err)
     os.Exit(1)
   }

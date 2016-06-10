@@ -1,7 +1,35 @@
+// Pulse is a stat collecting and publishing service. It serves historical
+// stats over an http api while live stats are sent to mist for live updates.
+//
+// Usage
+//
+// To start pulse as a server, simply run (with influx running locally):
+//
+//  pulse -s
+//
+// For more specific usage information, refer to the help doc `pulse -h`:
+//  Usage:
+//    pulse [flags]
+//
+//  Flags:
+//    -a, --aggregate-interval int         Interval at which stats are aggregated (default 15)
+//    -c, --config-file string              Config file location for server
+//    -H, --http-listen-address string     Http listen address (default "127.0.0.1:8080")
+//    -i, --influx-address string          InfluxDB server address (default "http://127.0.0.1:8086")
+//    -I, --insecure                       Run insecure (default true)
+//    -k, --kapacitor-address string       Kapacitor server address (http://127.0.0.1:9092)
+//    -l, --log-level string               Level at which to log (default "INFO")
+//    -m, --mist-address string            Mist server address
+//    -M, --mist-token string              Mist server token
+//    -p, --poll-interval int              Interval to request stats from clients (default 60)
+//    -s, --server                         Run as server
+//    -S, --server-listen-address string   Server listen address (default "127.0.0.1:3000")
+//    -t, --token string                   Security token (recommend placing in config file) (default "secret")
+//    -v, --version                        Print version info and exit
+//
 package main
 
 import (
-	"os"
 	"fmt"
 	"time"
 
@@ -12,82 +40,122 @@ import (
 
 	"github.com/nanopack/pulse/api"
 	"github.com/nanopack/pulse/influx"
+	"github.com/nanopack/pulse/kapacitor"
 	"github.com/nanopack/pulse/plexer"
 	pulse "github.com/nanopack/pulse/server"
 )
 
 var (
-	configFile         string
-	http_address       string
-	influx_address     string
-	log_level          string
-	mist_address       string
-	server_address     string
-	server             bool
-	token              = "secret"
-	poll_interval      = 60
-	aggregate_interval = 15
-)
+	// for clarity
+	httpAddress       = "127.0.0.1:8080"
+	serverAddress     = "127.0.0.1:3000"
+	influxAddress     = "http://127.0.0.1:8086"
+	kapacitorAddress  = "" // "http://127.0.0.1:9092"
+	mistAddress       = ""
+	mistToken         = ""
+	logLevel          = "INFO"
+	server            = false
+	insecure          = true
+	token             = "secret"
+	pollInterval      = 60
+	aggregateInterval = 15
 
-func main() {
+	configFile = ""
+	version    = false
 
-	command := cobra.Command{
+	// Pulse is the pulse cli
+	Pulse = &cobra.Command{
 		Use:   "pulse",
 		Short: "pulse is a stat collecting and publishing service",
 		Long:  ``,
-		Run: func(ccmd *cobra.Command, args []string) {
-			if !server {
-				ccmd.HelpFunc()(ccmd, args)
-				return
-			}
-			fmt.Println("configfile: ", configFile)
-			viper.SetConfigFile(configFile)
-			err := viper.ReadInConfig()
-			if err != nil {
-				fmt.Println("config err", err)
-			}
-			fmt.Println(viper.GetString("server_listen_address"))
-			lumber.Level(lumber.LvlInt(viper.GetString("log_level")))
 
-			serverStart()
-		},
+		PersistentPreRunE: readConfig,
+		PreRunE:           preFlight,
+		RunE:              startPulse,
+		SilenceErrors:     true,
+		SilenceUsage:      true,
 	}
 
-	command.Flags().StringVarP(&http_address, "http_listen_address", "H", "127.0.0.1:8080", "Http listen address")
-	viper.BindPFlag("http_listen_address", command.Flags().Lookup("http_listen_address"))
-	command.Flags().StringVarP(&server_address, "server_listen_address", "S", "127.0.0.1:3000", "Server listen address")
-	viper.BindPFlag("server_listen_address", command.Flags().Lookup("server_listen_address"))
-	command.Flags().StringVarP(&influx_address, "influx_address", "i", "http://127.0.0.1:8086", "InfluxDB server address")
-	viper.BindPFlag("influx_address", command.Flags().Lookup("influx_address"))
-	command.Flags().StringVarP(&mist_address, "mist_address", "m", "", "Mist server address")
-	viper.BindPFlag("mist_address", command.Flags().Lookup("mist_address"))
-	command.Flags().StringVarP(&log_level, "log_level", "l", "INFO", "Level at which to log")
-	viper.BindPFlag("log_level", command.Flags().Lookup("log_level"))
-	command.Flags().BoolVarP(&server, "server", "s", false, "Run as server")
-	viper.BindPFlag("server", command.Flags().Lookup("server"))
+	// to be populated by go linker
+	tag    string
+	commit string
+)
 
-	command.Flags().StringVarP(&token, "token", "t", "secret", "Security token (recommend placing in config file)")
-	viper.BindPFlag("token", command.Flags().Lookup("token"))
-	command.Flags().IntVarP(&poll_interval, "poll_interval", "p", 60, "Interval to request stats from clients")
-	viper.BindPFlag("poll_interval", command.Flags().Lookup("poll_interval"))
-	command.Flags().IntVarP(&aggregate_interval, "aggregate_interval", "a", 15, "Interval at which stats are aggregated")
-	viper.BindPFlag("aggregate_interval", command.Flags().Lookup("aggregate_interval"))
+func init() {
+	Pulse.Flags().StringP("http-listen-address", "H", httpAddress, "Http listen address")
+	viper.BindPFlag("http-listen-address", Pulse.Flags().Lookup("http-listen-address"))
+	Pulse.Flags().StringP("server-listen-address", "S", serverAddress, "Server listen address")
+	viper.BindPFlag("server-listen-address", Pulse.Flags().Lookup("server-listen-address"))
+	Pulse.Flags().StringP("influx-address", "i", influxAddress, "InfluxDB server address")
+	viper.BindPFlag("influx-address", Pulse.Flags().Lookup("influx-address"))
+	Pulse.Flags().StringP("kapacitor-address", "k", kapacitorAddress, "Kapacitor server address (http://127.0.0.1:9092)")
+	viper.BindPFlag("kapacitor-address", Pulse.Flags().Lookup("kapacitor-address"))
+	Pulse.Flags().StringP("mist-address", "m", mistAddress, "Mist server address")
+	viper.BindPFlag("mist-address", Pulse.Flags().Lookup("mist-address"))
+	Pulse.Flags().StringP("mist-token", "M", mistToken, "Mist server token")
+	viper.BindPFlag("mist-token", Pulse.Flags().Lookup("mist-token"))
+	Pulse.Flags().StringP("log-level", "l", logLevel, "Level at which to log")
+	viper.BindPFlag("log-level", Pulse.Flags().Lookup("log-level"))
+	Pulse.Flags().BoolP("server", "s", server, "Run as server")
+	viper.BindPFlag("server", Pulse.Flags().Lookup("server"))
+	Pulse.Flags().BoolP("insecure", "I", insecure, "Run insecure")
+	viper.BindPFlag("insecure", Pulse.Flags().Lookup("insecure"))
 
-	command.Flags().StringVarP(&configFile, "config_file", "c", "", "Config file location for server")
+	Pulse.Flags().StringP("token", "t", token, "Security token (recommend placing in config file)")
+	viper.BindPFlag("token", Pulse.Flags().Lookup("token"))
+	Pulse.Flags().IntP("poll-interval", "p", pollInterval, "Interval to request stats from clients")
+	viper.BindPFlag("poll-interval", Pulse.Flags().Lookup("poll-interval"))
+	Pulse.Flags().IntP("aggregate-interval", "a", aggregateInterval, "Interval at which stats are aggregated")
+	viper.BindPFlag("aggregate-interval", Pulse.Flags().Lookup("aggregate-interval"))
 
+	Pulse.Flags().StringVarP(&configFile, "config-file", "c", configFile, "Config file location for server")
+	Pulse.Flags().BoolVarP(&version, "version", "v", version, "Print version info and exit")
 
-	command.Execute()
+	lumber.Level(lumber.LvlInt(viper.GetString("log-level")))
 }
 
-func serverStart() {
+func preFlight(ccmd *cobra.Command, args []string) error {
+	if version {
+		fmt.Printf("pulse %s (%s)\n", tag, commit)
+		return fmt.Errorf("") // no error, just exit
+	}
+
+	if !viper.GetBool("server") {
+		ccmd.HelpFunc()(ccmd, args)
+		return fmt.Errorf("") // no error, just exit
+	}
+
+	return nil
+}
+
+func readConfig(ccmd *cobra.Command, args []string) error {
+	if configFile != "" {
+		viper.SetConfigFile(configFile)
+		err := viper.ReadInConfig()
+		if err != nil {
+			lumber.Fatal("Failed to read config - %v", err)
+			return err
+		}
+	}
+
+	return nil
+}
+
+func main() {
+	Pulse.Execute()
+}
+
+func startPulse(ccmd *cobra.Command, args []string) error {
+	// re-initialize logger
+	lumber.Level(lumber.LvlInt(viper.GetString("log-level")))
 
 	plex := plexer.NewPlexer()
 
-	if viper.GetString("mist_address") != "" {
-		mist, err := mist.New(viper.GetString("mist_address"))
+	if viper.GetString("mist-address") != "" {
+		mist, err := mist.New(viper.GetString("mist-address"), viper.GetString("mist-token"))
 		if err != nil {
 			lumber.Fatal("Mist failed to start - %v", err.Error())
-			os.Exit(1)
+			return err
 		}
 		plex.AddObserver("mist", mist.Publish)
 		defer mist.Close()
@@ -95,37 +163,47 @@ func serverStart() {
 
 	plex.AddBatcher("influx", influx.Insert)
 
-	err := pulse.Listen(viper.GetString("server_listen_address"), plex.Publish)
+	err := pulse.Listen(viper.GetString("server-listen-address"), plex.Publish)
 	if err != nil {
 		lumber.Fatal("Pulse failed to start - %v", err.Error())
-		os.Exit(1)
+		return err
 	}
 	// begin polling the connected servers
-	pi := viper.GetInt("poll_interval")
-	if pi == 0 {
-		pi = 60
+	pollSec := viper.GetInt("poll-interval")
+	if pollSec == 0 {
+		pollSec = 60
 	}
-	go pulse.StartPolling(nil, nil, time.Duration(pi)*time.Second, nil)
+	go pulse.StartPolling(nil, nil, time.Duration(pollSec)*time.Second, nil)
 
 	queries := []string{
 		"CREATE DATABASE statistics",
-		`CREATE RETENTION POLICY "2.days" ON statistics DURATION 2d REPLICATION 1 DEFAULT`,
-		`CREATE RETENTION POLICY "1.week" ON statistics DURATION 1w REPLICATION 1`,
+		`CREATE RETENTION POLICY one_day ON statistics DURATION 8h REPLICATION 1 DEFAULT`,
+		`CREATE RETENTION POLICY one_week ON statistics DURATION 1w REPLICATION 1`,
 	}
 
 	for _, query := range queries {
 		_, err := influx.Query(query)
 		if err != nil {
 			lumber.Fatal("Failed to query influx - %v", err.Error())
-			os.Exit(1)
+			return err
 		}
 	}
 
 	go influx.KeepContinuousQueriesUpToDate()
 
+	if viper.GetString("kapacitor-address") != "" {
+		err := kapacitor.Init()
+		if err != nil {
+			lumber.Fatal("Kapacitor failed to start - %v", err.Error())
+			return err
+		}
+	}
+
 	err = api.Start()
 	if err != nil {
 		lumber.Fatal("Api failed to start - %v", err.Error())
-		os.Exit(1)
+		return err
 	}
+
+	return nil
 }

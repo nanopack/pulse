@@ -1,3 +1,5 @@
+// Package provides the client the ability to connect to pulse and add
+// metrics/stats to be collected.
 package relay
 
 import (
@@ -19,6 +21,7 @@ var (
 )
 
 type (
+	// Relay is a pulse client
 	Relay struct {
 		conn       net.Conn
 		collectors map[string]taggedCollector
@@ -27,7 +30,7 @@ type (
 		myId       string
 	}
 
-	// stores the collector (poorly named 'id') and its associated tags
+	// stores the collector and its associated tags
 	taggedCollector struct {
 		collector Collector
 		tags      []string

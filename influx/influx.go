@@ -1,7 +1,9 @@
+// Package influx provides the backend for storing stats.
 package influx
 
 import (
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -16,6 +18,8 @@ import (
 var clientConn client.Client
 
 func Query(sql string) (*client.Response, error) {
+	lumber.Trace("[PULSE :: INFLUX] Querying influx: '%v'...", sql)
+
 	c, err := influxClient()
 	if err != nil {
 		return nil, err
@@ -54,13 +58,13 @@ func Insert(messageSet plexer.MessageSet) error {
 		// only one field per set of message tags.
 		field := map[string]interface{}{message.ID: value}
 		// create a point
-		point, err := client.NewPoint("metrics", tags, field, time.Now())
+		point, err := client.NewPoint(message.ID, tags, field, time.Now())
 		if err != nil {
 			continue
 		}
 		points = append(points, point)
 	}
-	return writePoints("statistics", "2.days", points)
+	return writePoints("statistics", "one_day", points)
 }
 
 func writePoints(database, retain string, points []*client.Point) error {
@@ -88,9 +92,17 @@ func influxClient() (client.Client, error) {
 		return clientConn, nil
 	}
 	clientConn, err = client.NewHTTPClient(client.HTTPConfig{
-		Addr: viper.GetString("influx_address"),
+		Addr: viper.GetString("influx-address"),
 	})
 	return clientConn, err
+}
+
+// convert map to string slice
+func slicify(mappy map[string]bool) (slicey []string) {
+	for k := range mappy {
+		slicey = append(slicey, k)
+	}
+	return
 }
 
 func KeepContinuousQueriesUpToDate() error {
@@ -99,17 +111,19 @@ func KeepContinuousQueriesUpToDate() error {
 	if err != nil {
 		return err
 	}
-	var aggregate_interval = viper.GetInt("aggregate_interval")
+	var aggregateInterval = viper.GetInt("aggregate-interval")
 
 	for {
 		// get fields
-		cols, err := c.Query(client.NewQuery("SHOW FIELD KEYS FROM \"2.days\".\"metrics\"", "statistics", "s"))
+		// todo: maybe rather than `/.*/` use `/([^a][^g][^g][^r][^e][^g][^a][^t][^e]).*/`
+		// or do a `show measurements` and skip 'aggregate' or `SHOW MEASUREMENTS WITH MEASUREMENT =~ /([^a][^g][^g][^r][^e][^g][^a][^t][^e]).*/`
+		cols, err := c.Query(client.NewQuery("SHOW FIELD KEYS", "statistics", "s")) // equivalent to including `FROM one_day./.*/`
 		if err != nil {
 			panic(err)
 		}
 
 		// check tags
-		groupBy, err := c.Query(client.NewQuery("SHOW TAG KEYS FROM \"2.days\".\"metrics\"", "statistics", "s"))
+		groupBy, err := c.Query(client.NewQuery("SHOW TAG KEYS", "statistics", "s"))
 		if err != nil {
 			panic(err)
 		}
@@ -135,43 +149,46 @@ func KeepContinuousQueriesUpToDate() error {
 		}
 
 		// populate current tags
-		group := []string{}
+		grp := map[string]bool{}
 		for _, res := range groupBy.Results {
 			for _, series := range res.Series {
-				if series.Name == "metrics" {
-					for _, val := range series.Values {
-						group = append(group, val[0].(string))
-					}
+				for _, val := range series.Values {
+					grp[val[0].(string)] = true
 				}
 			}
 		}
+		group := slicify(grp)
 
 		// populate current columns
-		columns := []string{}
+		clm := map[string]bool{}
 		for _, res := range cols.Results {
 			for _, series := range res.Series {
-				if series.Name == "metrics" {
-					for _, val := range series.Values {
-						columns = append(columns, val[0].(string))
-					}
+				for _, val := range series.Values {
+					clm[val[0].(string)] = true
 				}
 			}
 		}
+		columns := slicify(clm)
 
 		// group columns into "mean(col) AS col"
 		summary := []string{}
 		for _, col := range columns {
 			if col != "cpu" && col != "time" {
-				summary = append(summary, fmt.Sprintf(`mean(%s) AS "%s"`, col, col))
+				summary = append(summary, fmt.Sprintf(`mean(%s) AS %s`, col, col))
 			}
 		}
 
+		// sort so we don't always create new queries
+		sort.Strings(summary)
+		sort.Strings(group)
+
 		// create new query string
-		newQuery := `CREATE CONTINUOUS QUERY aggregate ON statistics BEGIN SELECT ` + fmt.Sprintf(strings.Join(summary, ", ")) + ` INTO statistics."1.week".metrics FROM statistics."2.days".metrics GROUP BY time(` + strconv.Itoa(aggregate_interval) + `m), ` + fmt.Sprintf(strings.Join(group, ", ")) + ` END`
+		newQuery := `CREATE CONTINUOUS QUERY aggregate ON statistics BEGIN SELECT ` + fmt.Sprintf(strings.Join(summary, ", ")) + ` INTO statistics.one_week.aggregate FROM statistics.one_day./.*/ GROUP BY time(` + strconv.Itoa(aggregateInterval) + `m), ` + fmt.Sprintf(strings.Join(group, ", ")) + ` END`
 
 		// if columns changed, rebuild continuous query
 		if (currentQuery != newQuery) && columns != nil {
-			lumber.Trace("New Query: %+s\n", newQuery)
+			lumber.Trace("OLD Query: %+q\n", currentQuery)
+			lumber.Trace("NEW Query: %+q\n", newQuery)
 			lumber.Trace("[PULSE :: INFLUX] Rebuilding continuous query...")
 			r, err := c.Query(client.NewQuery(`DROP CONTINUOUS QUERY aggregate ON statistics`, "statistics", "s"))
 			if err != nil {
@@ -184,6 +201,6 @@ func KeepContinuousQueriesUpToDate() error {
 			}
 		}
 
-		<-time.After(time.Duration(aggregate_interval) * time.Minute)
+		<-time.After(time.Duration(aggregateInterval) * time.Minute)
 	}
 }
