@@ -41,13 +41,14 @@ func Start() error {
 		return err
 	}
 
+	nanoauth.DefaultAuth.Header = "X-AUTH-TOKEN"
+
 	// blocking...
 	if viper.GetBool("insecure") {
 		lumber.Info("[PULSE :: API] Listening at 'http://%s'...\n", viper.GetString("http-listen-address"))
-		return http.ListenAndServe(viper.GetString("http-listen-address"), routes)
+		return nanoauth.ListenAndServe(viper.GetString("http-listen-address"), viper.GetString("token"), routes)
 	}
 	lumber.Info("[PULSE :: API] Listening at 'https://%s'...\n", viper.GetString("http-listen-address"))
-	nanoauth.DefaultAuth.Header = "X-AUTH-TOKEN"
 	return nanoauth.ListenAndServeTLS(viper.GetString("http-listen-address"), viper.GetString("token"), routes)
 }
 
