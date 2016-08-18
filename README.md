@@ -18,6 +18,7 @@ Usage:
 Flags:
   -a, --aggregate-interval int         Interval at which stats are aggregated (default 15)
   -c, --config-file string             Config file location for server
+  -C, --cors-allow string              Sets the 'Access-Control-Allow-Origin' header (default "*")
   -H, --http-listen-address string     Http listen address (default "127.0.0.1:8080")
   -i, --influx-address string          InfluxDB server address (default "http://127.0.0.1:8086")
   -I, --insecure                       Run insecure (default true)
@@ -43,7 +44,8 @@ Flags:
   "insecure": true,
   "mist-address": "",
   "mist-token": "",
-  "log-level": "INFO",
+  "log-level": "info",
+  "cors-allow": "*",
   "token": "secret",
   "poll-interval": 60,
   "aggregate-interval": 15

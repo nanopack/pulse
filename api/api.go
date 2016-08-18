@@ -64,6 +64,8 @@ func registerRoutes() (*pat.Router, error) {
 		rw.Write([]byte("pong"))
 	})
 
+	router.Options("/", cors)
+
 	router.Get("/keys", keysRequest)
 	router.Get("/tags", tagsRequest)
 
@@ -81,6 +83,14 @@ func registerRoutes() (*pat.Router, error) {
 	}
 
 	return router, nil
+}
+
+func cors(rw http.ResponseWriter, req *http.Request) {
+	rw.Header().Set("Access-Control-Allow-Origin", viper.GetString("cors-allow"))
+	rw.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE")
+	rw.Header().Set("Access-Control-Allow-Headers", "X-AUTH-TOKEN")
+	writeBody(apiMsg{"Success"}, rw, http.StatusOK, req)
+	return
 }
 
 // writeBody

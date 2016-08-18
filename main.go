@@ -14,6 +14,7 @@
 //  Flags:
 //    -a, --aggregate-interval int         Interval at which stats are aggregated (default 15)
 //    -c, --config-file string              Config file location for server
+//    -C, --cors-allow string              Sets the 'Access-Control-Allow-Origin' header (default "*")
 //    -H, --http-listen-address string     Http listen address (default "127.0.0.1:8080")
 //    -i, --influx-address string          InfluxDB server address (default "http://127.0.0.1:8086")
 //    -I, --insecure                       Run insecure (default true)
@@ -53,7 +54,8 @@ var (
 	kapacitorAddress  = "" // "http://127.0.0.1:9092"
 	mistAddress       = ""
 	mistToken         = ""
-	logLevel          = "INFO"
+	logLevel          = "info"
+	corsAllow         = "*"
 	server            = false
 	insecure          = true
 	token             = "secret"
@@ -96,6 +98,8 @@ func init() {
 	viper.BindPFlag("mist-token", Pulse.Flags().Lookup("mist-token"))
 	Pulse.Flags().StringP("log-level", "l", logLevel, "Level at which to log")
 	viper.BindPFlag("log-level", Pulse.Flags().Lookup("log-level"))
+	Pulse.Flags().StringP("cors-allow", "C", corsAllow, "Sets the 'Access-Control-Allow-Origin' header")
+	viper.BindPFlag("cors-allow", Pulse.Flags().Lookup("cors-allow"))
 	Pulse.Flags().BoolP("server", "s", server, "Run as server")
 	viper.BindPFlag("server", Pulse.Flags().Lookup("server"))
 	Pulse.Flags().BoolP("insecure", "I", insecure, "Run insecure")
