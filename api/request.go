@@ -92,7 +92,7 @@ func latestStat(res http.ResponseWriter, req *http.Request) {
 
 	filters := []string{}
 	for key, val := range req.URL.Query() {
-		if key == ":stat" || key == "limit" || key == "verb" {
+		if key == ":stat" || key == "limit" || key == "verb" || key == "x-auth-token" || key == "X-AUTH-TOKEN" {
 			continue
 		}
 		// if there are multiple values, "OR" them, and save as one filter element

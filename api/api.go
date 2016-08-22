@@ -69,20 +69,30 @@ func registerRoutes() (*pat.Router, error) {
 	router.Get("/keys", keysRequest)
 	router.Get("/tags", tagsRequest)
 
-	router.Get("/latest/{stat}", latestStat)
-	router.Get("/hourly/{stat}", hourlyStat)
-	router.Get("/daily/{stat}", dailyStat)
-	router.Get("/daily_peaks/{stat}", dailyStat)
+	router.Get("/latest/{stat}", doCors(latestStat))
+	router.Get("/hourly/{stat}", doCors(hourlyStat))
+	router.Get("/daily/{stat}", doCors(dailyStat))
+	router.Get("/daily_peaks/{stat}", doCors(dailyStat))
 
 	// only expose alert routes if alerting configured
 	if viper.GetString("kapacitor-address") != "" {
 		// todo: maybe get and list tasks from kapacitor
-		router.Post("/alerts", setAlert)
-		router.Put("/alerts", setAlert)
-		router.Delete("/alerts/{id}", deleteAlert)
+		router.Post("/alerts", doCors(setAlert))
+		router.Put("/alerts", doCors(setAlert))
+		router.Delete("/alerts/{id}", doCors(deleteAlert))
 	}
 
 	return router, nil
+}
+
+func doCors(fn http.HandlerFunc) http.HandlerFunc {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		rw.Header().Set("Access-Control-Allow-Origin", viper.GetString("cors-allow"))
+		rw.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE")
+		rw.Header().Set("Access-Control-Allow-Headers", "X-AUTH-TOKEN")
+
+		fn(rw, req)
+	}
 }
 
 func cors(rw http.ResponseWriter, req *http.Request) {
