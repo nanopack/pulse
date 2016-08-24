@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/spf13/viper"
+
 	"github.com/nanopack/pulse/influx"
 )
 
@@ -80,14 +82,21 @@ func latestStat(res http.ResponseWriter, req *http.Request) {
 	// that include the host info.
 	multiFilter := []string{}
 
+	// default how many responses to limit
+	limit := 1
+
 	// filters holds the influxDB language for the WHERE clause
 	filters := []string{}
 	for key, val := range req.URL.Query() {
-		if key == ":stat" || key == "verb" || key == "x-auth-token" || key == "X-AUTH-TOKEN" {
+		if key == ":stat" || key == "verb" || key == "start" || key == "stop" || key == "backfill" || key == "x-auth-token" || key == "X-AUTH-TOKEN" {
 			continue
 		}
 		if len(val) > 1 {
 			multiFilter = append(multiFilter, key)
+			// if filter applied number is greater than the limit, set limit to that
+			if len(val) > limit {
+				limit = len(val)
+			}
 		}
 		// if there are multiple values, "OR" them, and save as one filter element
 		// allows `host=a&host=b` in query
@@ -119,13 +128,25 @@ func latestStat(res http.ResponseWriter, req *http.Request) {
 	// add the FROM to the query
 	query = fmt.Sprintf(`%s FROM "%s"`, query, stat)
 
-	// grab the latest
-	filters = append(filters, "time > now() - 1m")
+	// grab the latest chunk (poll interval used so we don't have too many results)
+	// allow missing 1 stat update (we have to sacrifice accuracy because influx
+	// acts eventually consistent and doesn't return the data in a predictable,
+	// timely manner)
+	filters = append(filters, fmt.Sprintf("time > now() - %ds", viper.GetInt("poll-interval")*2))
 
 	// filter by filters
 	if len(filters) > 0 {
 		query = fmt.Sprintf("%s WHERE %s", query, strings.Join(filters, " AND "))
 	}
+
+	// if aggregate function used, group by time and limit to 1
+	if verb != "none" {
+		limit = 1
+		query = fmt.Sprintf("%s GROUP BY time(%ds) FILL(none)", query, viper.GetInt("poll-interval"))
+	}
+
+	// grab the latest available
+	query = fmt.Sprintf("%s ORDER BY time DESC LIMIT %d", query, limit)
 
 	records, err := influx.Query(query)
 	if err != nil {
@@ -353,7 +374,14 @@ func dailyStat(res http.ResponseWriter, req *http.Request) {
 
 	// if backfill set to anything, fill in the missing data with 0 value
 	if bf != "" {
-		daytimes := []string{"00:00", "00:15", "00:30", "00:45", "01:00", "01:15", "01:30", "01:45", "02:00", "02:15", "02:30", "02:45", "03:00", "03:15", "03:30", "03:45", "04:00", "04:15", "04:30", "04:45", "05:00", "05:15", "05:30", "05:45", "06:00", "06:15", "06:30", "06:45", "07:00", "07:15", "07:30", "07:45", "08:00", "08:15", "08:30", "08:45", "09:00", "09:15", "09:30", "09:45", "10:00", "10:15", "10:30", "10:45", "11:00", "11:15", "11:30", "11:45", "12:00", "12:15", "12:30", "12:45", "13:00", "13:15", "13:30", "13:45", "14:00", "14:15", "14:30", "14:45", "15:00", "15:15", "15:30", "15:45", "16:00", "16:15", "16:30", "16:45", "17:00", "17:15", "17:30", "17:45", "18:00", "18:15", "18:30", "18:45", "19:00", "19:15", "19:30", "19:45", "20:00", "20:15", "20:30", "20:45", "21:00", "21:15", "21:30", "21:45", "22:00", "22:15", "22:30", "22:45", "23:00", "23:15", "23:30", "23:45"}
+		daytimes := []string{"00:00", "00:15", "00:30", "00:45", "01:00", "01:15", "01:30", "01:45", "02:00", "02:15", "02:30", "02:45",
+			"03:00", "03:15", "03:30", "03:45", "04:00", "04:15", "04:30", "04:45", "05:00", "05:15", "05:30", "05:45",
+			"06:00", "06:15", "06:30", "06:45", "07:00", "07:15", "07:30", "07:45", "08:00", "08:15", "08:30", "08:45",
+			"09:00", "09:15", "09:30", "09:45", "10:00", "10:15", "10:30", "10:45", "11:00", "11:15", "11:30", "11:45",
+			"12:00", "12:15", "12:30", "12:45", "13:00", "13:15", "13:30", "13:45", "14:00", "14:15", "14:30", "14:45",
+			"15:00", "15:15", "15:30", "15:45", "16:00", "16:15", "16:30", "16:45", "17:00", "17:15", "17:30", "17:45",
+			"18:00", "18:15", "18:30", "18:45", "19:00", "19:15", "19:30", "19:45", "20:00", "20:15", "20:30", "20:45",
+			"21:00", "21:15", "21:30", "21:45", "22:00", "22:15", "22:30", "22:45", "23:00", "23:15", "23:30", "23:45"}
 
 		for i := range daytimes {
 			if _, ok := result[daytimes[i]]; !ok {
