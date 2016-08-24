@@ -75,31 +75,26 @@ func latestStat(res http.ResponseWriter, req *http.Request) {
 		verb = "mean" // default to average (avg of [x] is x)
 	}
 
-	// limit is how many to limit, and will be derived from the length of specified
-	// array: (`host=a&host=b&limit=host` limit would be 2)
-	var limit int
-	filter := req.URL.Query().Get("limit")
+	// multiFilter allows for information to be given when multiple same-key filters are applied
+	// on a query where verb is 'none'. eg. `host=a&host=b&verb=none` would return 2 results and
+	// that include the host info.
+	multiFilter := []string{}
 
-	if filter == "" || len(req.URL.Query()[filter]) == 0 {
-		limit = 1 // default to 1
-	} else {
-		limit = len(req.URL.Query()[filter])
-	}
-
-	// stat is the stat we are selecting
-	stat := req.URL.Query().Get(":stat")
-	query := fmt.Sprintf(`SELECT %v("%v") FROM "%v"`, verb, stat, stat)
-
+	// filters holds the influxDB language for the WHERE clause
 	filters := []string{}
 	for key, val := range req.URL.Query() {
-		if key == ":stat" || key == "limit" || key == "verb" || key == "x-auth-token" || key == "X-AUTH-TOKEN" {
+		if key == ":stat" || key == "verb" || key == "x-auth-token" || key == "X-AUTH-TOKEN" {
 			continue
+		}
+		if len(val) > 1 {
+			multiFilter = append(multiFilter, key)
 		}
 		// if there are multiple values, "OR" them, and save as one filter element
 		// allows `host=a&host=b` in query
 		if len(val) > 0 {
 			var tfil []string
 			for i := range val {
+				// todo: does req.Url.Query()[intkey] return an int or is it always a string?
 				tfil = append(tfil, fmt.Sprintf("\"%s\" = '%s'", key, val[i]))
 			}
 			filters = append(filters, fmt.Sprintf("(%s)", strings.Join(tfil, " OR ")))
@@ -108,13 +103,29 @@ func latestStat(res http.ResponseWriter, req *http.Request) {
 		filters = append(filters, fmt.Sprintf("\"%s\" = ''", key))
 	}
 
+	// stat is the stat we are selecting
+	stat := req.URL.Query().Get(":stat")
+	var query string
+	if verb == "none" {
+		query = fmt.Sprintf(`SELECT "%s"`, stat)
+		// return multiFilter info
+		if len(multiFilter) > 0 {
+			query = fmt.Sprintf(`%s, "%s"`, query, strings.Join(multiFilter, "\", \""))
+		}
+	} else {
+		query = fmt.Sprintf(`SELECT %s("%s")`, verb, stat)
+	}
+
+	// add the FROM to the query
+	query = fmt.Sprintf(`%s FROM "%s"`, query, stat)
+
+	// grab the latest
+	filters = append(filters, "time > now() - 1m")
+
 	// filter by filters
 	if len(filters) > 0 {
 		query = fmt.Sprintf("%s WHERE %s", query, strings.Join(filters, " AND "))
 	}
-
-	// grab the latest
-	query = fmt.Sprintf("%s ORDER BY time DESC LIMIT %d", query, limit)
 
 	records, err := influx.Query(query)
 	if err != nil {
@@ -191,10 +202,10 @@ func hourlyStat(res http.ResponseWriter, req *http.Request) {
 
 	if bf == "" {
 		// grab the hourly averages ('group by' should aggregate multiple filters)
-		query = fmt.Sprintf("%s GROUP BY time(1h) fill(none)", query) //  OR fill(0) to not return 0 for empty values
+		query = fmt.Sprintf("%s GROUP BY time(1h) FILL(none)", query) //  OR FILL(0) to not return 0 for empty values
 	} else {
 		// grab the hourly averages ('group by' should aggregate multiple filters)
-		query = fmt.Sprintf("%s GROUP BY time(1h) fill(0)", query) //  OR fill(0) to not return 0 for empty values
+		query = fmt.Sprintf("%s GROUP BY time(1h) FILL(0)", query) //  OR FILL(0) to not return 0 for empty values
 	}
 
 	records, err := influx.Query(query)
@@ -272,7 +283,7 @@ func dailyStat(res http.ResponseWriter, req *http.Request) {
 	}
 
 	// grab the hourly averages
-	query = fmt.Sprintf("%s GROUP BY time(15m) fill(none)", query)
+	query = fmt.Sprintf("%s GROUP BY time(15m) FILL(none)", query)
 
 	records, err := influx.Query(query)
 	if err != nil {

@@ -22,7 +22,8 @@ getCurrTag() {
 # build pulse
 echo "Building pulse..."
 gox -ldflags="-X main.tag=$(getCurrTag) -X main.commit=$(getCurrCommit)" \
-  -osarch "darwin/amd64 linux/amd64 windows/amd64" -output="./build/{{.OS}}/{{.Arch}}/pulse"
+  -osarch "linux/amd64" -output="./build/{{.OS}}/{{.Arch}}/pulse"
+  # -osarch "darwin/amd64 linux/amd64 windows/amd64" -output="./build/{{.OS}}/{{.Arch}}/pulse"
 
 # look through each os/arch/file and generate an md5 for each
 echo "Generating md5s..."
