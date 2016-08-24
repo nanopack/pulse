@@ -138,9 +138,47 @@ func latestStat(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	// if there are multiple values (if a filter was applies more than 1x)
+	if len(records.Results[0].Series[0].Values) > 1 {
+		// create the master result map (will have key, val)
+		resulto := make([]map[string]interface{}, 0)
+
+		// loop through the values ([][]interface{})
+		for _, val := range records.Results[0].Series[0].Values {
+			// create a temporary result for holding values by column name
+			tRes := make(map[string]interface{})
+
+			// loop through nested slice
+			for i := range val {
+				// time will be at index 0 unless influx changes things
+				// eg. (select "value"..; returns "time, value")
+				if i == 0 {
+					// make time uniform
+					timestamp, _ := val[i].(json.Number).Int64()
+					tRes["time"] = timestamp * 1000
+					continue
+				}
+				// our value will be at index 1
+				if i == 1 {
+					// make value generic
+					tRes["value"] = val[i]
+					continue
+				}
+				// assign value to column name
+				tRes[records.Results[0].Series[0].Columns[i]] = val[i]
+			}
+			// append temp result to master result map
+			resulto = append(resulto, tRes)
+		}
+
+		writeBody(resulto, res, http.StatusOK, req)
+		return
+	}
+
 	result := point{}
 	val := records.Results[0].Series[0].Values[0]
 	result.Time, _ = val[0].(json.Number).Int64()
+	result.Time = result.Time * 1000
 	result.Value, _ = val[1].(json.Number).Float64()
 
 	writeBody(result, res, http.StatusOK, req)
