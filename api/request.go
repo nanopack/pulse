@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"math"
 	"net/http"
-	"strings"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/spf13/viper"
@@ -17,6 +17,11 @@ import (
 type (
 	point struct {
 		Time  int64   `json:"time"`
+		Value float64 `json:"value"`
+	}
+
+	dayPoint struct {
+		Time  string  `json:"time"`
 		Value float64 `json:"value"`
 	}
 )
@@ -404,5 +409,21 @@ func dailyStat(res http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	writeBody(result, res, http.StatusOK, req)
+	// todo: will it be better&possible(backfill) to just use a struct slice the whole time?
+	// convert result map to struct slice (make more uniform with hourly response)
+	dailies := mapToStructSlice(result)
+
+	writeBody(dailies, res, http.StatusOK, req)
+}
+
+// converts a map to a struct slice (uniformity)
+func mapToStructSlice(mappy map[string]float64) []dayPoint {
+	thing := []dayPoint{}
+
+	for k, v := range mappy {
+		thang := dayPoint{Time: k, Value: v}
+		thing = append(thing, thang)
+	}
+
+	return thing
 }

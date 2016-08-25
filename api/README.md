@@ -37,9 +37,9 @@ $ curl http://localhost:8080/latest/cpu_used?service=web1
 # {"time":0,"value":0.2207}
 ```
 
-#### get latest max 'cpu_used' for 'web1', 'web2', and 'web3' services (note: limit must be set)
+#### get latest max 'cpu_used' for 'web1', 'web2', and 'web3' services
 ```sh
-$ curl "http://localhost:8080/latest/cpu_used?service=web1&service=web2&service=web3&limit=service&verb=max"
+$ curl "http://localhost:8080/latest/cpu_used?service=web1&service=web2&service=web3&verb=max"
 # {"time":0,"value":0.262}
 ```
 

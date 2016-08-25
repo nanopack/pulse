@@ -61,6 +61,7 @@ var (
 	token             = "secret"
 	pollInterval      = 60
 	aggregateInterval = 15
+	retention         = 1
 
 	configFile = ""
 	version    = false
@@ -111,6 +112,8 @@ func init() {
 	viper.BindPFlag("poll-interval", Pulse.Flags().Lookup("poll-interval"))
 	Pulse.Flags().IntP("aggregate-interval", "a", aggregateInterval, "Interval at which stats are aggregated")
 	viper.BindPFlag("aggregate-interval", Pulse.Flags().Lookup("aggregate-interval"))
+	Pulse.Flags().IntP("retention", "r", retention, "Number of weeks to store aggregated stats")
+	viper.BindPFlag("retention", Pulse.Flags().Lookup("retention"))
 
 	Pulse.Flags().StringVarP(&configFile, "config-file", "c", configFile, "Config file location for server")
 	Pulse.Flags().BoolVarP(&version, "version", "v", version, "Print version info and exit")
@@ -137,16 +140,25 @@ func readConfig(ccmd *cobra.Command, args []string) error {
 		viper.SetConfigFile(configFile)
 		err := viper.ReadInConfig()
 		if err != nil {
-			lumber.Fatal("Failed to read config - %v", err)
-			return err
+			return fmt.Errorf("Failed to read config - %v", err)
 		}
+	}
+
+	// validate retention
+	if viper.GetInt("retention") < 1 {
+		fmt.Println("Bad value for retention, resetting to 1")
+		viper.Set("retention", 1)
 	}
 
 	return nil
 }
 
 func main() {
-	Pulse.Execute()
+	// print errors
+	err := Pulse.Execute()
+	if err != nil && err.Error() != "" {
+		fmt.Println(err)
+	}
 }
 
 func startPulse(ccmd *cobra.Command, args []string) error {
@@ -158,8 +170,7 @@ func startPulse(ccmd *cobra.Command, args []string) error {
 	if viper.GetString("mist-address") != "" {
 		mist, err := mist.New(viper.GetString("mist-address"), viper.GetString("mist-token"))
 		if err != nil {
-			lumber.Fatal("Mist failed to start - %v", err.Error())
-			return err
+			return fmt.Errorf("Mist failed to start - %s", err.Error())
 		}
 		plex.AddObserver("mist", mist.Publish)
 		defer mist.Close()
@@ -169,8 +180,7 @@ func startPulse(ccmd *cobra.Command, args []string) error {
 
 	err := pulse.Listen(viper.GetString("server-listen-address"), plex.Publish)
 	if err != nil {
-		lumber.Fatal("Pulse failed to start - %v", err.Error())
-		return err
+		return fmt.Errorf("Pulse failed to start - %s", err.Error())
 	}
 	// begin polling the connected servers
 	pollSec := viper.GetInt("poll-interval")
@@ -181,15 +191,14 @@ func startPulse(ccmd *cobra.Command, args []string) error {
 
 	queries := []string{
 		"CREATE DATABASE statistics",
-		`CREATE RETENTION POLICY one_day ON statistics DURATION 8h REPLICATION 1 DEFAULT`,
-		`CREATE RETENTION POLICY one_week ON statistics DURATION 1w REPLICATION 1`,
+		"CREATE RETENTION POLICY one_day ON statistics DURATION 8h REPLICATION 1 DEFAULT",
+		fmt.Sprintf("CREATE RETENTION POLICY one_week ON statistics DURATION %dw REPLICATION 1", viper.GetInt("retention")), // todo: ALTER as well?
 	}
 
 	for _, query := range queries {
 		_, err := influx.Query(query)
 		if err != nil {
-			lumber.Fatal("Failed to query influx - %v", err.Error())
-			return err
+			return fmt.Errorf("Failed to query influx - %s", err.Error())
 		}
 	}
 
@@ -198,15 +207,13 @@ func startPulse(ccmd *cobra.Command, args []string) error {
 	if viper.GetString("kapacitor-address") != "" {
 		err := kapacitor.Init()
 		if err != nil {
-			lumber.Fatal("Kapacitor failed to start - %v", err.Error())
-			return err
+			return fmt.Errorf("Kapacitor failed to start - %s", err.Error())
 		}
 	}
 
 	err = api.Start()
 	if err != nil {
-		lumber.Fatal("Api failed to start - %v", err.Error())
-		return err
+		return fmt.Errorf("Api failed to start - %s", err.Error())
 	}
 
 	return nil

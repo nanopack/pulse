@@ -27,6 +27,7 @@ Flags:
   -m, --mist-address string            Mist server address
   -M, --mist-token string              Mist server token
   -p, --poll-interval int              Interval to request stats from clients (default 60)
+  -r, --retention int                  Number of weeks to store aggregated stats (default 1)
   -s, --server                         Run as server
   -S, --server-listen-address string   Server listen address (default "127.0.0.1:3000")
   -t, --token string                   Security token (recommend placing in config file) (default "secret")
@@ -48,7 +49,8 @@ Flags:
   "cors-allow": "*",
   "token": "secret",
   "poll-interval": 60,
-  "aggregate-interval": 15
+  "aggregate-interval": 15,
+  "retention": 1
 }
 ```
 
@@ -71,8 +73,8 @@ Flags:
 | **PUT** /alerts | Update a kapacitor alert | json alert object | json alert object |
 | **DELETE** /alerts/{alert} | Delete a kapacitor alert | nil | success message |
 
-`*`: reserved query parameters are 'limit' and 'verb', all others act as filters  
-`**`: reserved query parameters are 'verb', 'start', and 'stop', all others act as filters  
+`*`: reserved query parameters is 'verb', all others act as filters  
+`**`: reserved query parameters are 'backfill', 'verb', 'start', and 'stop', all others act as filters  
 
 **note:** The API requires a token to be passed for authentication by default and is configurable at server start (`--token`). The token is passed in as a custom header: `X-AUTH-TOKEN`.  
 
