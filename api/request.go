@@ -6,6 +6,7 @@ import (
 	"math"
 	"net/http"
 	"strings"
+	"strconv"
 	"time"
 
 	"github.com/spf13/viper"
@@ -261,10 +262,15 @@ func hourlyStat(res http.ResponseWriter, req *http.Request) {
 
 	if bf == "" {
 		// grab the hourly averages ('group by' should aggregate multiple filters)
-		query = fmt.Sprintf("%s GROUP BY time(1h) FILL(none)", query) //  OR FILL(0) to not return 0 for empty values
+		query = fmt.Sprintf("%s GROUP BY time(1h) FILL(none)", query)
 	} else {
-		// grab the hourly averages ('group by' should aggregate multiple filters)
-		query = fmt.Sprintf("%s GROUP BY time(1h) FILL(0)", query) //  OR FILL(0) to not return 0 for empty values
+		if s, err := strconv.ParseFloat(bf, 64); err != nil {
+			// if bf is not a number, use 0 to backfill
+			query = fmt.Sprintf("%s GROUP BY time(1h) FILL(0)", query)
+		} else {
+			// else use the number value of backfill
+			query = fmt.Sprintf("%s GROUP BY time(1h) FILL(%v)", query, s)
+		}
 	}
 
 	records, err := influx.Query(query)
@@ -383,9 +389,17 @@ func dailyStat(res http.ResponseWriter, req *http.Request) {
 			"18:00", "18:15", "18:30", "18:45", "19:00", "19:15", "19:30", "19:45", "20:00", "20:15", "20:30", "20:45",
 			"21:00", "21:15", "21:30", "21:45", "22:00", "22:15", "22:30", "22:45", "23:00", "23:15", "23:30", "23:45"}
 
+		// set default backfill value
+		bfFloat := 0.0
+
+		// if what was passed in is a valid number, reset backfill to that
+		if s, err := strconv.ParseFloat(bf, 64); err == nil {
+			bfFloat = s
+		}
+
 		for i := range daytimes {
 			if _, ok := result[daytimes[i]]; !ok {
-				result[daytimes[i]] = 0.0
+				result[daytimes[i]] = bfFloat
 			}
 		}
 	}
