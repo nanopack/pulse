@@ -89,7 +89,7 @@ func doCors(fn http.HandlerFunc) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		rw.Header().Set("Access-Control-Allow-Origin", viper.GetString("cors-allow"))
 		rw.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE")
-		rw.Header().Set("Access-Control-Allow-Headers", "X-AUTH-TOKEN")
+		rw.Header().Set("Access-Control-Allow-Headers", "X-AUTH-TOKEN, X-CSRF-Token")
 
 		fn(rw, req)
 	}
@@ -98,7 +98,7 @@ func doCors(fn http.HandlerFunc) http.HandlerFunc {
 func cors(rw http.ResponseWriter, req *http.Request) {
 	rw.Header().Set("Access-Control-Allow-Origin", viper.GetString("cors-allow"))
 	rw.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE")
-	rw.Header().Set("Access-Control-Allow-Headers", "X-AUTH-TOKEN")
+	rw.Header().Set("Access-Control-Allow-Headers", "X-AUTH-TOKEN, X-CSRF-Token")
 	writeBody(apiMsg{"Success"}, rw, http.StatusOK, req)
 	return
 }
