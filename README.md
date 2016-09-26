@@ -18,6 +18,7 @@ Usage:
 Flags:
   -a, --aggregate-interval int         Interval at which stats are aggregated (default 15)
   -c, --config-file string             Config file location for server
+  -C, --cors-allow string              Sets the 'Access-Control-Allow-Origin' header (default "*")
   -H, --http-listen-address string     Http listen address (default "127.0.0.1:8080")
   -i, --influx-address string          InfluxDB server address (default "http://127.0.0.1:8086")
   -I, --insecure                       Run insecure (default true)
@@ -26,6 +27,7 @@ Flags:
   -m, --mist-address string            Mist server address
   -M, --mist-token string              Mist server token
   -p, --poll-interval int              Interval to request stats from clients (default 60)
+  -r, --retention int                  Number of weeks to store aggregated stats (default 1)
   -s, --server                         Run as server
   -S, --server-listen-address string   Server listen address (default "127.0.0.1:3000")
   -t, --token string                   Security token (recommend placing in config file) (default "secret")
@@ -43,10 +45,12 @@ Flags:
   "insecure": true,
   "mist-address": "",
   "mist-token": "",
-  "log-level": "INFO",
+  "log-level": "info",
+  "cors-allow": "*",
   "token": "secret",
   "poll-interval": 60,
-  "aggregate-interval": 15
+  "aggregate-interval": 15,
+  "retention": 1
 }
 ```
 
@@ -69,8 +73,8 @@ Flags:
 | **PUT** /alerts | Update a kapacitor alert | json alert object | json alert object |
 | **DELETE** /alerts/{alert} | Delete a kapacitor alert | nil | success message |
 
-`*`: reserved query parameters are 'limit' and 'verb', all others act as filters  
-`**`: reserved query parameters are 'verb', 'start', and 'stop', all others act as filters  
+`*`: reserved query parameters is 'verb', all others act as filters  
+`**`: reserved query parameters are 'backfill', 'verb', 'start', and 'stop', all others act as filters  
 
 **note:** The API requires a token to be passed for authentication by default and is configurable at server start (`--token`). The token is passed in as a custom header: `X-AUTH-TOKEN`.  
 

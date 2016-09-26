@@ -23,8 +23,8 @@ Pulse is a stat collecting and publishing service. It serves historical stats ov
 | **PUT** /alerts | Update a kapacitor alert | json alert object | json alert object |
 | **DELETE** /alerts/{alert} | Delete a kapacitor alert | nil | success message |
 
-`*`: reserved query parameters are 'limit' and '[verb](https://docs.influxdata.com/influxdb/v0.13/query_language/functions)', all others act as filters  
-`**`: reserved query parameters are '[verb](https://docs.influxdata.com/influxdb/v0.13/query_language/functions)', 'start', and 'stop', all others act as filters  
+`*`: reserved query parameters is '[verb](https://docs.influxdata.com/influxdb/v0.13/query_language/functions)', all others act as filters  
+`**`: reserved query parameters are 'backfill', '[verb](https://docs.influxdata.com/influxdb/v0.13/query_language/functions)', 'start', and 'stop', all others act as filters  
 
 **note:** The API requires a token to be passed for authentication by default and is configurable at server start (`--token`). The token is passed in as a custom header: `X-AUTH-TOKEN`.  
 
@@ -37,9 +37,9 @@ $ curl http://localhost:8080/latest/cpu_used?service=web1
 # {"time":0,"value":0.2207}
 ```
 
-#### get latest max 'cpu_used' for 'web1', 'web2', and 'web3' services (note: limit must be set)
+#### get latest max 'cpu_used' for 'web1', 'web2', and 'web3' services
 ```sh
-$ curl "http://localhost:8080/latest/cpu_used?service=web1&service=web2&service=web3&limit=service&verb=max"
+$ curl "http://localhost:8080/latest/cpu_used?service=web1&service=web2&service=web3&verb=max"
 # {"time":0,"value":0.262}
 ```
 

@@ -92,7 +92,8 @@ func influxClient() (client.Client, error) {
 		return clientConn, nil
 	}
 	clientConn, err = client.NewHTTPClient(client.HTTPConfig{
-		Addr: viper.GetString("influx-address"),
+		Addr:    viper.GetString("influx-address"),
+		Timeout: 5 * time.Second,
 	})
 	return clientConn, err
 }
