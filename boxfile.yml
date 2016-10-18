@@ -1,0 +1,13 @@
+code.build:
+  # the golang engine provides the golang runtime and runs bundle install during the
+  # compile phase
+  engine: 'golang'
+  config:
+    package: 'github.com/nanopack/pulse'
+
+data.influx:
+  image: 'nanobox/influxdb'
+
+# run the application in a web component
+web.pulse:
+  start: '/app/pulse -s -k http://${DATA_INFLUX_HOST}:9092 -i http://${DATA_INFLUX_HOST}:8086 -H :8080 -S :3000 -p 30'

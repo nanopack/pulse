@@ -32,14 +32,17 @@ func setAlert(res http.ResponseWriter, req *http.Request) {
 
 	lambda := map[string]string{alert.Level: fmt.Sprintf("\"mean_%s\" > %d", alert.Metric, alert.Threshold)}
 
+	// generate id to set for task/return to user
+	alert.GenId()
+
 	task := kapacitor.Task{
-		// todo: make id more unique, for use with same stat, multiple tags
-		Id:              alert.Metric,
+		Id:              alert.Id,
 		Type:            "batch",
 		Database:        "statistics",
 		RetentionPolicy: "one_day",
-		Script:          kapacitor.GenBatchTick(alert.Metric, "statistics", "one_day", alert.Metric, alert.Tags, alert.Duration, "30s", lambda, alert.Post),
 		Status:          "enabled",
+		Script:          kapacitor.GenBatchTick(alert.Metric, "statistics", "one_day", alert.Metric, alert.Tags, alert.Duration, "30s", lambda, alert.Post),
+		// Script:       GenBatchTick(stat, database, retentionPolicy, measurement string, where map[string]string, period, every string, alerts map[string]string, post string) string,
 	}
 
 	err = kapacitor.SetTask(task)
@@ -53,8 +56,6 @@ func setAlert(res http.ResponseWriter, req *http.Request) {
 
 // delete a task
 func deleteAlert(res http.ResponseWriter, req *http.Request) {
-	// BUG(glinton) ids are not unique enough for the same stat to be used with different tag sets
-	// todo: make id more unique, for use with same stat, multiple tags
 	taskId := req.URL.Query().Get(":id")
 
 	err := kapacitor.DeleteTask(taskId)

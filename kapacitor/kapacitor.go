@@ -1,7 +1,7 @@
 // Package kapacitor provides the means for alerting if a stat exceeds a threshold.
 package kapacitor
 
-// todo: store configured alerts
+// configured alerts should be stored within kapacitor
 
 import (
 	"fmt"
@@ -11,6 +11,7 @@ import (
 	"github.com/influxdata/kapacitor/client/v1"
 	"github.com/jcelliott/lumber"
 	"github.com/spf13/viper"
+	"github.com/twinj/uuid"
 )
 
 var (
@@ -29,12 +30,17 @@ type Task struct {
 
 // Alert is an object to simplify creating tasks
 type Alert struct {
+	Id        string            `json:"id"`              // id of task created (for returning to user)
 	Tags      map[string]string `json:"tags,omitempty"`  // populates the WHERE
 	Metric    string            `json:"metric"`          // the stat to track
 	Level     string            `json:"level,omitempty"` // the alert level (info, warn, crit)
 	Threshold int               `json:"threshold"`       // limit that alert is triggered
 	Duration  string            `json:"duration"`        // how far back to average (5m)
 	Post      string            `json:"post"`            // api to hit when alert is triggered
+}
+
+func (alrt *Alert) GenId() {
+	alrt.Id = uuid.NewV4().String()
 }
 
 // Init initializes the client
@@ -137,7 +143,8 @@ func genAlert(alerts map[string]string, post string) string {
 	return fmt.Sprintf(`
 	|alert()
 %s
-		.log('/tmp/%s')`, genLambda(alerts), post)
+		.post('%s')
+		.log('/tmp/alerts.log')`, genLambda(alerts), post)
 }
 
 // generate the lambda portion of the TICKscript
