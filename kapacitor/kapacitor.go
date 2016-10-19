@@ -134,17 +134,32 @@ func DeleteTask(id string) error {
 // GenBatchTick generates a simple batch type TICKscript
 func GenBatchTick(stat, database, retentionPolicy, measurement string, where map[string]string, period, every string, alerts map[string]string, post string) string {
 	query := genQuery(stat, database, retentionPolicy, measurement, genWhere(where), period, every)
-	alert := genAlert(alerts, post)
+	alert := genAlert(alerts, genId(stat, where), post)
 	return fmt.Sprintf("batch%s\n%s", query, alert)
 }
 
 // generate the alert portion of the TICKscript
-func genAlert(alerts map[string]string, post string) string {
+func genAlert(alerts map[string]string, id, post string) string {
 	return fmt.Sprintf(`
 	|alert()
 %s
+%s
 		.post('%s')
-		.log('/tmp/alerts.log')`, genLambda(alerts), post)
+		.log('/tmp/alerts.log')`, id, genLambda(alerts), post)
+}
+
+// generate the id/message portion of the TICKscript
+func genId(stat string, where map[string]string) string {
+	t := []string{}
+	for _, v := range where {
+		t = append(t, v)
+	}
+
+	ts := strings.Join(t, "|")
+
+	return fmt.Sprintf(`
+		.id('[%s] %s')
+		.message('{{ .ID }} is {{ .Level }} value:{{ index .Fields "mean_%s" }}')`, ts, stat, stat)
 }
 
 // generate the lambda portion of the TICKscript
