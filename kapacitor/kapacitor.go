@@ -145,6 +145,7 @@ func genAlert(alerts map[string]string, id, post string) string {
 %s
 %s
 		.post('%s')
+		.stateChangesOnly()
 		.log('/tmp/alerts.log')`, id, genLambda(alerts), post)
 }
 
