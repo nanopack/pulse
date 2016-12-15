@@ -1,12 +1,15 @@
-code.build:
+run.config:
   # the golang engine provides the golang runtime and runs bundle install during the
   # compile phase
   engine: 'golang'
-  config:
+  engine.config:
     package: 'github.com/nanopack/pulse'
 
 data.influx:
   image: 'nanobox/influxdb'
+
+# wget https://dl.influxdata.com/kapacitor/releases/kapacitor_1.1.0_amd64.deb
+# sudo dpkg -i kapacitor_1.1.0_amd64.deb
 
 # run the application in a web component
 web.pulse:

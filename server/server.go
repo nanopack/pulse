@@ -3,7 +3,6 @@
 package server
 
 import (
-	"bufio"
 	"errors"
 	"net"
 	"strings"
@@ -56,14 +55,45 @@ func Listen(address string, publisher Publisher) error {
 	return nil
 }
 
+func readData(conn net.Conn) (string, error) {
+	// make a temporary bytes var to read from the connection
+	tmp := make([]byte, 128)
+	// make 0 length data bytes (since we'll be appending)
+	data := make([]byte, 0)
+
+	// loop through the connection stream, appending tmp to data
+	for {
+		// read to the tmp var
+		n, err := conn.Read(tmp)
+		if err != nil {
+			return "", err
+		}
+
+		// append read data to full data
+		data = append(data, tmp[:n]...)
+
+		// break if ends with '\n' (todo: not as sure as delimited reading)
+		if tmp[n-1] == '\n' {
+			break
+		}
+	}
+
+	return strings.TrimSuffix(string(data), "\n"), nil
+}
+
 func handleConnection(conn net.Conn) {
 	defer conn.Close()
-	r := bufio.NewReader(conn)
-	line, err := r.ReadString('\n')
+
+	dataChan := make(chan string)
+	errChan := make(chan error)
+
+	// read id
+	line, err := readData(conn)
 	if err != nil {
+		lumber.Debug("Failed to read from connection - %s", err)
 		return
 	}
-	line = strings.TrimSuffix(line, "\n")
+
 	split := strings.SplitN(line, " ", 2)
 	if split[0] != "id" {
 		conn.Write([]byte("identify first with the 'id' command\n"))
@@ -78,13 +108,24 @@ func handleConnection(conn net.Conn) {
 	clients[id] = &client{conn: conn}
 	conn.Write([]byte("ok\n"))
 
+	// read client (relay) communication
+	go func() {
+		for {
+			data, err := readData(conn)
+			if err != nil {
+				lumber.Trace("[PULSE :: SERVER] Error reading data - %s", err)
+				errChan <- err
+				return
+			}
+			lumber.Trace("[PULSE :: SERVER] Reading data ok")
+			dataChan <- data
+		}
+	}()
+
 	// now handle commands and data
 	for {
-		line, err := r.ReadString('\n')
-		if err != nil {
-			return
-		}
-		line = strings.TrimSuffix(line, "\n")
+		line = <-dataChan
+
 		if line == "close" {
 			return
 		}
@@ -108,11 +149,13 @@ func handleConnection(conn net.Conn) {
 			}
 
 			for _, stat := range stats {
+				// stat may be "test-test:25.25"
 				splitStat := strings.Split(stat, ":")
 				if len(splitStat) != 2 {
 					// i can only handle key value
 					continue
 				}
+				// splitstat would be ["test-test", "25.25"]
 
 				name := splitStat[0]
 				splitName := strings.Split(name, "-")
@@ -155,13 +198,13 @@ func handleConnection(conn net.Conn) {
 			lumber.Trace("[PULSE :: SERVER] BAD: %v", split)
 			conn.Write([]byte("unknown command\n"))
 		}
-
 	}
 }
 
 // returns the server ids associated with the collector name given
 func findIds(collectors []string) []string {
 	ids := make([]string, 0)
+	// todo: RLock()
 	for id, client := range clients {
 		for _, collector := range collectors {
 			if client.includes(collector) {
@@ -174,6 +217,7 @@ func findIds(collectors []string) []string {
 }
 
 func sendAll(command string, ids []string) {
+	lumber.Trace("[PULSE :: SERVER] sendAll...")
 	for _, id := range ids {
 		client, ok := clients[id]
 		if ok {
