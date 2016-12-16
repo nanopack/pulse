@@ -13,12 +13,13 @@ import (
 	"github.com/nanopack/pulse/server"
 )
 
-var address = "127.0.0.1:1234"
+var address = "127.0.0.1:8080"
 var wait = sync.WaitGroup{}
 
 var messages = []plexer.MessageSet{}
 
 func TestMain(m *testing.M) {
+	fmt.Println("Starting to listen...")
 	err := server.Listen(address, func(msgSet plexer.MessageSet) error {
 		messages = append(messages, msgSet)
 		wait.Add(-len(msgSet.Messages))
