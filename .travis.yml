@@ -15,4 +15,6 @@ services:
   - kapacitor
 
 install: go get -t -v .
-script: go test -v -cover ./...
+script:
+  - go build
+  - go test -v -cover ./...
