@@ -40,9 +40,9 @@ func Insert(messageSet plexer.MessageSet) error {
 		// make sure to include the MessageSet's tags
 		for _, tag := range append(messageSet.Tags, message.Tags...) {
 			elems := strings.SplitN(tag, ":", 2)
-			// only include tags with key:value format
+			// only include tags with key:value format (all others ignored)
 			if len(elems) < 2 {
-				continue
+				continue // we could possibly 'tag' influx entry with these single 'tags'
 			}
 
 			// insert the tag into my list of tags

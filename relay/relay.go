@@ -93,7 +93,7 @@ func (relay *Relay) establishConnection() error {
 	return nil
 }
 
-// NewRelay creates a new relay
+// NewRelay creates a new client (relay)
 func NewRelay(address, id string) (*Relay, error) {
 	newRelay := &Relay{
 		connected:  true,
