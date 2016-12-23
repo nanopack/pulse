@@ -24,6 +24,8 @@ type (
 	// Relay is a pulse client
 	Relay struct {
 		conn       net.Conn
+		dataChan   chan string
+		errChan    chan error
 		collectors map[string]taggedCollector
 		connected  bool
 		hostAddr   string
@@ -37,30 +39,37 @@ type (
 	}
 )
 
-func (relay *Relay) readData() (string, error) {
-	// make a temporary bytes var to read from the connection
-	tmp := make([]byte, 128)
-	// make 0 length data bytes (since we'll be appending)
-	data := make([]byte, 0)
-
-	// loop through the connection stream, appending tmp to data
+func (relay *Relay) readData() {
 	for {
-		// read to the tmp var
-		n, err := relay.conn.Read(tmp)
-		if err != nil {
-			return "", err
+		// make a temporary bytes var to read from the connection
+		tmp := make([]byte, 128)
+		// make 0 length data bytes (since we'll be appending)
+		data := make([]byte, 0)
+
+		// loop through the connection stream, appending tmp to data
+		for {
+			// read to the tmp var
+			n, err := relay.conn.Read(tmp)
+			if err != nil {
+				relay.errChan <- err
+				return
+			}
+
+			// append read data to full data
+			data = append(data, tmp[:n]...)
+
+			// break if ends with '\n' (todo: need to ensure writing w/o "\n" works)
+			if tmp[n-1] == '\n' { //|| tmp[n-1] == 'EOF' {
+				break
+			}
 		}
 
-		// append read data to full data
-		data = append(data, tmp[:n]...)
-
-		// break if ends with '\n' (todo: not as sure as delimited reading)
-		if tmp[n-1] == '\n' {
-			break
+		// return strings.TrimSuffix(string(data), "\n"), nil
+		datas := strings.Split(strings.TrimSuffix(string(data), "\n"), "\n")
+		for i := range datas {
+			relay.dataChan <- datas[i]
 		}
 	}
-
-	return strings.TrimSuffix(string(data), "\n"), nil
 }
 
 // establishConnection establishes a connection and id's with the server
@@ -76,8 +85,17 @@ func (relay *Relay) establishConnection() error {
 	// hand over connection to client (relay)
 	relay.conn = conn
 
-	line, err := relay.readData()
-	if err != nil {
+	relay.dataChan = make(chan string)
+	relay.errChan = make(chan error)
+
+	// start data reader
+	go relay.readData()
+
+	var line string
+
+	select {
+	case line = <-relay.dataChan:
+	case err := <-relay.errChan:
 		return err
 	}
 
@@ -93,7 +111,7 @@ func (relay *Relay) establishConnection() error {
 	return nil
 }
 
-// NewRelay creates a new relay
+// NewRelay creates a new client (relay)
 func NewRelay(address, id string) (*Relay, error) {
 	newRelay := &Relay{
 		connected:  true,
@@ -114,8 +132,8 @@ func NewRelay(address, id string) (*Relay, error) {
 // runLoop handles communication from the server
 func (relay *Relay) runLoop() {
 	for {
-		line, err := relay.readData()
-		if err != nil {
+		select {
+		case err := <-relay.errChan:
 			lumber.Error("[PULSE :: RELAY] Disconnected from host %v!", relay.hostAddr)
 			// retry indefinitely
 			for {
@@ -128,43 +146,43 @@ func (relay *Relay) runLoop() {
 			}
 			// we won't have anything in 'line' so continue
 			continue
-		}
+		case line := <-relay.dataChan:
+			line = strings.TrimSuffix(line, "\n")
+			split := strings.SplitN(line, " ", 2)
 
-		line = strings.TrimSuffix(line, "\n")
-		split := strings.SplitN(line, " ", 2)
-
-		cmd := split[0]
-		switch cmd {
-		case "ok":
-			lumber.Trace("[PULSE :: RELAY] OK: %v", split)
-			// just an ack
-		case "get":
-			if len(split) != 2 {
-				continue
-			}
-			lumber.Trace("[PULSE :: RELAY] GET: %v", split)
-			stats := strings.Split(split[1], ",")
-			results := make([]string, 0)
-			for _, stat := range stats {
-				tagCollector, ok := relay.collectors[stat]
-				if !ok {
+			cmd := split[0]
+			switch cmd {
+			case "ok":
+				lumber.Trace("[PULSE :: RELAY] OK: %v", split)
+				// just an ack
+			case "get":
+				if len(split) != 2 {
 					continue
 				}
-				for name, value := range tagCollector.collector.Collect() {
-					formatted := strconv.FormatFloat(value, 'f', 4, 64)
-					if name == "" {
-						name = stat
+				lumber.Trace("[PULSE :: RELAY] GET: %v", split)
+				stats := strings.Split(split[1], ",")
+				results := make([]string, 0)
+				for _, stat := range stats {
+					tagCollector, ok := relay.collectors[stat]
+					if !ok {
+						continue
 					}
-					results = append(results, fmt.Sprintf("%s-%s:%s", stat, name, formatted))
+					for name, value := range tagCollector.collector.Collect() {
+						formatted := strconv.FormatFloat(value, 'f', 4, 64)
+						if name == "" {
+							name = stat
+						}
+						results = append(results, fmt.Sprintf("%s-%s:%s", stat, name, formatted))
+					}
 				}
+				if len(results) > 0 {
+					response := fmt.Sprintf("got %s\n", strings.Join(results, ","))
+					relay.conn.Write([]byte(response))
+				}
+			default:
+				lumber.Trace("[PULSE :: RELAY] BAD: %v", split)
+				relay.conn.Write([]byte("unknown command\n"))
 			}
-			if len(results) > 0 {
-				response := fmt.Sprintf("got %s\n", strings.Join(results, ","))
-				relay.conn.Write([]byte(response))
-			}
-		default:
-			lumber.Trace("[PULSE :: RELAY] BAD: %v", split)
-			relay.conn.Write([]byte("unknown command\n"))
 		}
 	}
 }

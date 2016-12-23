@@ -1,6 +1,6 @@
 sudo: required
 language: go
-go: 1.6
+go: 1.7.3
 
 before_install:
   - curl -ko /tmp/kapacitor.deb https://dl.influxdata.com/kapacitor/nightlies/kapacitor_nightly_amd64.deb
@@ -15,4 +15,6 @@ services:
   - kapacitor
 
 install: go get -t -v .
-script: go test -v -cover ./...
+script:
+  - go build
+  - go test -v ./...

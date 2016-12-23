@@ -30,6 +30,7 @@ type (
 func keysRequest(res http.ResponseWriter, req *http.Request) {
 	cols, err := influx.Query("SHOW FIELD KEYS FROM one_day./.*/") // or show measurements? - aggregate
 	if err != nil {
+		// todo: don't panic, we can handle this
 		panic(err)
 	}
 

@@ -151,6 +151,7 @@ Contributions to the pulse project are welcome and encouraged. Pulse is a [Nanob
 
 #### TODO
 - Ensure conn.Read() can handle network partitions
+- Tests
 
 ## Licence
 

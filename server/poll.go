@@ -67,10 +67,12 @@ func Poll(tags []string) {
 		return
 	}
 	ids := findIds(tags)
+	lumber.Trace("[PULSE :: SERVER] ids - '%+q'", ids)
 	if len(ids) > 0 {
 		command := "get " + strings.Join(tags, ",") + "\n"
 		sendAll(command, ids)
 	}
+	lumber.Trace("[PULSE :: SERVER] END Poll")
 }
 
 // PollAll polls all clients for registered collectors(stats to be collected)
