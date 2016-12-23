@@ -12,7 +12,7 @@ import (
 	"github.com/nanopack/pulse/server"
 )
 
-var serverAddr = "127.0.0.1:9899"
+var serverAddr = "127.0.0.1:9897"
 var testRelay *relay.Relay
 
 func stdoutPublisher(messages plexer.MessageSet) error {

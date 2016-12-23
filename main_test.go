@@ -8,24 +8,32 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jcelliott/lumber"
+
 	"github.com/nanopack/pulse/plexer"
-	"github.com/nanopack/pulse/relay"
+	pulse "github.com/nanopack/pulse/relay"
 	"github.com/nanopack/pulse/server"
 )
 
-var address = "127.0.0.1:8080"
+var address = "127.0.0.1:8043"
 var wait = sync.WaitGroup{}
 
 var messages = []plexer.MessageSet{}
 
 func TestMain(m *testing.M) {
+	lumber.Level(lumber.LvlInt("trace"))
 	fmt.Println("Starting to listen...")
 	err := server.Listen(address, func(msgSet plexer.MessageSet) error {
 		messages = append(messages, msgSet)
-		wait.Add(-len(msgSet.Messages))
+		fmt.Printf("ADDING %d waits\n", -len(msgSet.Messages))
+		for range msgSet.Messages {
+			fmt.Println("DONE-ING WAITGROUP")
+			wait.Done()
+		}
 		return nil
 	})
 	fmt.Println("Server listening...")
+	// time.Sleep(time.Second)
 
 	if err != nil {
 		panic(fmt.Sprintf("unable to listen %v", err))
@@ -36,7 +44,7 @@ func TestMain(m *testing.M) {
 
 func TestEndToEnd(test *testing.T) {
 	fmt.Println("Testing end to end...")
-	relay, err := relay.NewRelay(address, "relay.station.1")
+	relay, err := pulse.NewRelay(address, "relay.station.1")
 	if err != nil {
 		test.Errorf("unable to connect to server %v", err)
 		return
@@ -53,9 +61,10 @@ func TestEndToEnd(test *testing.T) {
 	relay.AddCollector("disk", nil, randCollector())
 	fmt.Println("DISK relay added...")
 
-	time.Sleep(time.Millisecond * 100)
+	time.Sleep(time.Millisecond * 500)
 
 	fmt.Println("DISK polling...")
+
 	wait.Add(1)
 	server.Poll([]string{"disk"})
 	fmt.Println("DISK polled")
@@ -76,9 +85,8 @@ func TestEndToEnd(test *testing.T) {
 	if len(messages) != 3 {
 		test.Errorf("Expected to recieve 3 messages but instead got %d", len(messages))
 	}
-	messages = []plexer.MessageSet{}
 }
 
-func randCollector() relay.Collector {
-	return relay.NewPointCollector(rand.Float64)
+func randCollector() pulse.Collector {
+	return pulse.NewPointCollector(rand.Float64)
 }

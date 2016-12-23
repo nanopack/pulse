@@ -20,10 +20,10 @@ var apiAddr = "0.0.0.0:9898"
 
 func TestMain(m *testing.M) {
 	viper.SetDefault("http-listen-address", apiAddr)
-	viper.SetDefault("influx-address", "http://192.168.0.50:8086")
-	viper.SetDefault("kapacitor-address", "http://192.168.0.50:9092")
-	// viper.SetDefault("kapacitor-address", "http://127.0.0.1:9092")
-	// viper.SetDefault("influx-address", "http://127.0.0.1:8086")
+	// viper.SetDefault("influx-address", "http://192.168.0.50:8086")
+	// viper.SetDefault("kapacitor-address", "http://192.168.0.50:9092")
+	viper.SetDefault("kapacitor-address", "http://127.0.0.1:9092")
+	viper.SetDefault("influx-address", "http://127.0.0.1:8086")
 	viper.SetDefault("insecure", true)
 	viper.SetDefault("log-level", "trace")
 
