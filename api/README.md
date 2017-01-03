@@ -54,7 +54,6 @@ $ curl http://localhost:8080/hourly/cpu_used?service=web1
 $ curl "http://localhost:8080/hourly/cpu_used?service=web1&service=web2&service=web3&verb=max"
 # [{"time":1465419600000,"value":0.22331906098017212}]
 ```
-<sup>**note**: Multiple filters on hourly needs tested for accuracy</sup>
 
 #### get daily averages 'cpu_used' for 'web1' service
 ```sh
@@ -67,7 +66,6 @@ $ curl http://localhost:8080/daily/cpu_used?service=web1
 $ curl "http://localhost:8080/daily/cpu_used?service=web1&service=web2&service=web3&verb=max&start=3d"
 # [{"time":1465419600000,"value":0.22331906098017212}]
 ```
-<sup>**note**: Multiple filters on daily needs tested for accuracy</sup>
 
 #### get tags to filter by
 ```sh
@@ -99,7 +97,5 @@ $ curl http://localhost:8080/alerts -d '{
 $ curl http://localhost:8080/alerts/cpu_used -X DELETE
 # {"msg":"Success"}
 ```
-<sup>**note**: Known bug regarding lack of unique alert id</sup>
-
 
 [![open source](http://nano-assets.gopagoda.io/open-src/nanobox-open-src.png)](http://nanobox.io/open-source)

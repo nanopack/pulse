@@ -31,5 +31,5 @@ _testmain.go
 TODO
 build
 pulse
-config.json
-tester/tester
+*.json
+tester/

@@ -3,7 +3,6 @@
 package server
 
 import (
-	"bufio"
 	"errors"
 	"net"
 	"strings"
@@ -56,14 +55,57 @@ func Listen(address string, publisher Publisher) error {
 	return nil
 }
 
+func readData(conn net.Conn, dataChan chan string, errChan chan error) {
+	for {
+		// make a temporary bytes var to read from the connection
+		tmp := make([]byte, 128)
+		// make 0 length data bytes (since we'll be appending)
+		data := make([]byte, 0)
+
+		// loop through the connection stream, appending tmp to data
+		for {
+			// read to the tmp var
+			n, err := conn.Read(tmp)
+			if err != nil {
+				errChan <- err
+				return
+			}
+
+			// append read data to full data
+			data = append(data, tmp[:n]...)
+
+			// break if ends with '\n' (todo: need to ensure writing w/o "\n" works)
+			if tmp[n-1] == '\n' { //|| tmp[n-1] == 'EOF' {
+				break
+			}
+		}
+
+		// return strings.TrimSuffix(string(data), "\n"), nil
+		datas := strings.Split(strings.TrimSuffix(string(data), "\n"), "\n")
+		for i := range datas {
+			dataChan <- datas[i]
+		}
+	}
+}
+
 func handleConnection(conn net.Conn) {
 	defer conn.Close()
-	r := bufio.NewReader(conn)
-	line, err := r.ReadString('\n')
-	if err != nil {
+
+	dataChan := make(chan string)
+	errChan := make(chan error)
+
+	go readData(conn, dataChan, errChan)
+
+	var line string
+
+	// read id
+	select {
+	case line = <-dataChan:
+	case err := <-errChan:
+		lumber.Debug("Failed to read from connection - %s", err)
 		return
 	}
-	line = strings.TrimSuffix(line, "\n")
+
 	split := strings.SplitN(line, " ", 2)
 	if split[0] != "id" {
 		conn.Write([]byte("identify first with the 'id' command\n"))
@@ -80,88 +122,90 @@ func handleConnection(conn net.Conn) {
 
 	// now handle commands and data
 	for {
-		line, err := r.ReadString('\n')
-		if err != nil {
-			return
-		}
-		line = strings.TrimSuffix(line, "\n")
-		if line == "close" {
-			return
-		}
-		split := strings.SplitN(line, " ", 2)
-		if len(split) != 2 {
-			continue
-		}
-
-		cmd := split[0]
-		switch cmd {
-		case "ok":
-			lumber.Trace("[PULSE :: SERVER] OK: %v", split)
-			// just an ack
-		case "got":
-			lumber.Trace("[PULSE :: SERVER] GOT: %v", split)
-			stats := strings.Split(split[1], ",")
-
-			metric := plexer.MessageSet{
-				Tags:     []string{"metrics", "host:" + id},
-				Messages: make([]plexer.Message, 0),
+		select {
+		case line = <-dataChan:
+			if line == "close" {
+				return
 			}
-
-			for _, stat := range stats {
-				splitStat := strings.Split(stat, ":")
-				if len(splitStat) != 2 {
-					// i can only handle key value
-					continue
-				}
-
-				name := splitStat[0]
-				splitName := strings.Split(name, "-")
-				if len(splitName) != 2 {
-					// the name didnt come in as collector-name
-					continue
-				}
-				tags := clients[id].tagList(splitName[0])
-				message := plexer.Message{
-					ID:   splitName[1],
-					Tags: tags,
-					Data: splitStat[1],
-				}
-
-				metric.Messages = append(metric.Messages, message)
-			}
-			publish(metric)
-		case "add":
-			lumber.Trace("[PULSE :: SERVER] ADD: %v", split)
-			if !strings.Contains(split[1], ":") {
-				clients[id].add(split[1], []string{})
+			split := strings.SplitN(line, " ", 2)
+			if len(split) != 2 {
 				continue
 			}
-			split = strings.SplitN(split[1], ":", 2)
-			tags := strings.Split(split[1], ",")
-			if split[1] == "" {
-				tags = []string{}
+
+			cmd := split[0]
+			switch cmd {
+			case "ok":
+				lumber.Trace("[PULSE :: SERVER] OK: %v", split)
+				// just an ack
+			case "got":
+				lumber.Trace("[PULSE :: SERVER] GOT: %v", split)
+				stats := strings.Split(split[1], ",")
+
+				metric := plexer.MessageSet{
+					Tags:     []string{"metrics", "host:" + id},
+					Messages: make([]plexer.Message, 0),
+				}
+
+				for _, stat := range stats {
+					// stat may be "test-test:25.25"
+					splitStat := strings.Split(stat, ":")
+					if len(splitStat) != 2 {
+						// i can only handle key value
+						continue
+					}
+					// splitstat would be ["test-test", "25.25"]
+
+					name := splitStat[0]
+					splitName := strings.Split(name, "-")
+					if len(splitName) != 2 {
+						// the name didnt come in as collector-name
+						continue
+					}
+					tags := clients[id].tagList(splitName[0])
+					message := plexer.Message{
+						ID:   splitName[1],
+						Tags: tags,
+						Data: splitStat[1],
+					}
+
+					metric.Messages = append(metric.Messages, message)
+				}
+				publish(metric)
+			case "add":
+				lumber.Trace("[PULSE :: SERVER] ADD: %v", split)
+				if !strings.Contains(split[1], ":") {
+					clients[id].add(split[1], []string{})
+					continue
+				}
+				split = strings.SplitN(split[1], ":", 2)
+				tags := strings.Split(split[1], ",")
+				if split[1] == "" {
+					tags = []string{}
+				}
+				clients[id].add(split[0], tags)
+
+			case "remove":
+				lumber.Trace("[PULSE :: SERVER] REMOVE: %v", split)
+				clients[id].remove(split[1])
+				// record that the remote does not have a stat available
+			case "close":
+				lumber.Trace("[PULSE :: SERVER] CLOSE: %v", split)
+				// clean shutoff of the connection
+				delete(clients, id)
+			default:
+				lumber.Trace("[PULSE :: SERVER] BAD: %v", split)
+				conn.Write([]byte("unknown command\n"))
 			}
-			clients[id].add(split[0], tags)
-
-		case "remove":
-			lumber.Trace("[PULSE :: SERVER] REMOVE: %v", split)
-			clients[id].remove(split[1])
-			// record that the remote does not have a stat available
-		case "close":
-			lumber.Trace("[PULSE :: SERVER] CLOSE: %v", split)
-			// clean shutoff of the connection
-			delete(clients, id)
-		default:
-			lumber.Trace("[PULSE :: SERVER] BAD: %v", split)
-			conn.Write([]byte("unknown command\n"))
+		case err := <-errChan:
+			lumber.Trace("[PULSE :: SERVER] ERROR: %s", err)
 		}
-
 	}
 }
 
 // returns the server ids associated with the collector name given
 func findIds(collectors []string) []string {
 	ids := make([]string, 0)
+	// todo: RLock()
 	for id, client := range clients {
 		for _, collector := range collectors {
 			if client.includes(collector) {
@@ -174,6 +218,7 @@ func findIds(collectors []string) []string {
 }
 
 func sendAll(command string, ids []string) {
+	lumber.Trace("[PULSE :: SERVER] sendAll...")
 	for _, id := range ids {
 		client, ok := clients[id]
 		if ok {

@@ -150,10 +150,8 @@ The TCP api used to communicate between the pulse server and a relay is simple a
 Contributions to the pulse project are welcome and encouraged. Pulse is a [Nanobox](https://nanobox.io) project and contributions should follow the [Nanobox Contribution Process & Guidelines](https://docs.nanobox.io/contributing/).
 
 #### TODO
-- extend alert id to be more unique for using same stat with multiple tags
-- verify hourly/daily verb implementation and multiple filters works as expected
-- there may be a bug with continuous queries aggregating by host and service rather than just service
-
+- Ensure conn.Read() can handle network partitions
+- Tests
 
 ## Licence
 

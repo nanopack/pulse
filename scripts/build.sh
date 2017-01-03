@@ -21,7 +21,7 @@ getCurrTag() {
 
 # build pulse
 echo "Building pulse..."
-gox -ldflags="-X main.tag=$(getCurrTag) -X main.commit=$(getCurrCommit)" \
+gox -ldflags="-s -X main.tag=$(getCurrTag) -X main.commit=$(getCurrCommit)" \
   -osarch "linux/amd64" -output="./build/{{.OS}}/{{.Arch}}/pulse"
   # -osarch "darwin/amd64 linux/amd64 windows/amd64" -output="./build/{{.OS}}/{{.Arch}}/pulse"
 
