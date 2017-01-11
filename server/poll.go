@@ -77,13 +77,20 @@ func Poll(tags []string) {
 
 // PollAll polls all clients for registered collectors(stats to be collected)
 func PollAll() {
-	lumber.Trace("[PULSE :: SERVER] PollAll...")
+	lumber.Trace("[PULSE :: SERVER] PollAll: %d clients connected...", len(clients))
 	// todo: RLock()
-	for _, client := range clients {
+	for id, client := range clients {
 		command := "get " + strings.Join(client.collectorList(), ",") + "\n"
 		if command == "get \n" {
 			continue
 		}
-		go client.conn.Write([]byte(command))
+		go func() {
+			_, err := client.conn.Write([]byte(command))
+			if err != nil {
+				lumber.Trace("[PULSE :: SERVER] PollAll: Error - %s", err)
+				delete(clients, id)
+				client.conn.Close()
+			}
+		}()
 	}
 }

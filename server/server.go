@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net"
 	"strings"
+	"time"
 
 	"github.com/jcelliott/lumber"
 
@@ -56,6 +57,7 @@ func Listen(address string, publisher Publisher) error {
 }
 
 func readData(conn net.Conn, dataChan chan string, errChan chan error) {
+	zero := time.Time{}
 	for {
 		// make a temporary bytes var to read from the connection
 		tmp := make([]byte, 128)
@@ -64,6 +66,9 @@ func readData(conn net.Conn, dataChan chan string, errChan chan error) {
 
 		// loop through the connection stream, appending tmp to data
 		for {
+			// readDeadline 2x as long as heartbeat
+			conn.SetReadDeadline(time.Now().Add(20 * time.Second))
+
 			// read to the tmp var
 			n, err := conn.Read(tmp)
 			if err != nil {
@@ -79,6 +84,8 @@ func readData(conn net.Conn, dataChan chan string, errChan chan error) {
 				break
 			}
 		}
+
+		conn.SetReadDeadline(zero)
 
 		// return strings.TrimSuffix(string(data), "\n"), nil
 		datas := strings.Split(strings.TrimSuffix(string(data), "\n"), "\n")
@@ -117,6 +124,8 @@ func handleConnection(conn net.Conn) {
 	}
 
 	id := split[1]
+	defer delete(clients, id)
+
 	clients[id] = &client{conn: conn}
 	conn.Write([]byte("ok\n"))
 
@@ -125,10 +134,19 @@ func handleConnection(conn net.Conn) {
 		select {
 		case line = <-dataChan:
 			if line == "close" {
+				lumber.Trace("[PULSE :: SERVER] CLOSE: %s", line)
 				return
 			}
+
+			if line == "ping" {
+				lumber.Trace("[PULSE :: SERVER] PING: %s", line)
+				conn.Write([]byte("pong\n"))
+				continue
+			}
+
 			split := strings.SplitN(line, " ", 2)
 			if len(split) != 2 {
+				lumber.Trace("[PULSE :: SERVER] Not enough data: %v", split)
 				continue
 			}
 
@@ -191,13 +209,14 @@ func handleConnection(conn net.Conn) {
 			case "close":
 				lumber.Trace("[PULSE :: SERVER] CLOSE: %v", split)
 				// clean shutoff of the connection
-				delete(clients, id)
+				return
 			default:
 				lumber.Trace("[PULSE :: SERVER] BAD: %v", split)
-				conn.Write([]byte("unknown command\n"))
+				// don't spam network
 			}
 		case err := <-errChan:
 			lumber.Trace("[PULSE :: SERVER] ERROR: %s", err)
+			return
 		}
 	}
 }
@@ -222,7 +241,14 @@ func sendAll(command string, ids []string) {
 	for _, id := range ids {
 		client, ok := clients[id]
 		if ok {
-			go client.conn.Write([]byte(command))
+			go func() {
+				_, err := client.conn.Write([]byte(command))
+				if err != nil {
+					lumber.Trace("[PULSE :: SERVER] sendAll: Error - %s", err)
+					delete(clients, id)
+					client.conn.Close()
+				}
+			}()
 		}
 	}
 }
