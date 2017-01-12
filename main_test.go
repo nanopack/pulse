@@ -36,7 +36,7 @@ func TestMain(m *testing.M) {
 	// time.Sleep(time.Second)
 
 	if err != nil {
-		panic(fmt.Sprintf("unable to listen %v", err))
+		panic(fmt.Sprintf("unable to listen %s", err))
 	}
 	rtn := m.Run()
 	os.Exit(rtn)
@@ -46,7 +46,7 @@ func TestEndToEnd(test *testing.T) {
 	fmt.Println("Testing end to end...")
 	relay, err := pulse.NewRelay(address, "relay.station.1")
 	if err != nil {
-		test.Errorf("unable to connect to server %v", err)
+		test.Errorf("unable to connect to server %s", err)
 		return
 	}
 	defer relay.Close()

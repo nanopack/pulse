@@ -30,13 +30,13 @@ func stdoutPublisher(messages plexer.MessageSet) error {
 			tags[elems[0]] = elems[1]
 		}
 
-		fmt.Printf("BATCH : %s, %v, %v\n", message.ID, tags, message.Data)
+		fmt.Printf("BATCH : %s, %v, %s\n", message.ID, tags, message.Data)
 	}
 
 	// immitation single
 	for _, message := range messages.Messages {
 		message.Tags = append(message.Tags, messages.Tags...)
-		fmt.Printf("SINGLE: %+q, %v\n", append(message.Tags, message.ID), message.Data)
+		fmt.Printf("SINGLE: %+q, %s\n", append(message.Tags, message.ID), message.Data)
 	}
 
 	return nil

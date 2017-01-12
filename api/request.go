@@ -235,7 +235,7 @@ func hourlyStat(res http.ResponseWriter, req *http.Request) {
 
 	// stat is the stat we are selecting
 	stat := req.URL.Query().Get(":stat")
-	query := fmt.Sprintf(`SELECT %s("%v") FROM one_week.aggregate`, verb, stat)
+	query := fmt.Sprintf(`SELECT %s("%s") FROM one_week.aggregate`, verb, stat)
 
 	filters := []string{}
 	for key, val := range req.URL.Query() {
@@ -256,8 +256,8 @@ func hourlyStat(res http.ResponseWriter, req *http.Request) {
 	}
 
 	// set time filter
-	filters = append(filters, fmt.Sprintf("time > now() - %v", start))
-	filters = append(filters, fmt.Sprintf("time < now() - %v", stop))
+	filters = append(filters, fmt.Sprintf("time > now() - %s", start))
+	filters = append(filters, fmt.Sprintf("time < now() - %s", stop))
 
 	// filter by filters
 	if len(filters) > 0 {
@@ -275,7 +275,7 @@ func hourlyStat(res http.ResponseWriter, req *http.Request) {
 			query = fmt.Sprintf("%s GROUP BY time(1h) FILL(0)", query)
 		} else {
 			// else use the number value of backfill
-			query = fmt.Sprintf("%s GROUP BY time(1h) FILL(%v)", query, s)
+			query = fmt.Sprintf("%s GROUP BY time(1h) FILL(%f)", query, s)
 		}
 	}
 
@@ -324,7 +324,7 @@ func dailyStat(res http.ResponseWriter, req *http.Request) {
 
 	// stat is the stat we are selecting
 	stat := req.URL.Query().Get(":stat")
-	query := fmt.Sprintf(`SELECT %s("%v") FROM one_week.aggregate`, verb, stat)
+	query := fmt.Sprintf(`SELECT %s("%s") FROM one_week.aggregate`, verb, stat)
 
 	filters := []string{}
 	for key, val := range req.URL.Query() {
@@ -345,8 +345,8 @@ func dailyStat(res http.ResponseWriter, req *http.Request) {
 	}
 
 	// set time filter
-	filters = append(filters, fmt.Sprintf("time > now() - %v", start))
-	filters = append(filters, fmt.Sprintf("time < now() - %v", stop))
+	filters = append(filters, fmt.Sprintf("time > now() - %s", start))
+	filters = append(filters, fmt.Sprintf("time < now() - %s", stop))
 
 	// filter by filters
 	if len(filters) > 0 {

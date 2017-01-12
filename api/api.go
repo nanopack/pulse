@@ -119,7 +119,7 @@ func writeBody(v interface{}, rw http.ResponseWriter, status int, req *http.Requ
 		errMsg = msg["error"]
 	}
 
-	lumber.Debug(`[PULSE :: ACCESS] %v - [%v] %v %v %v - "User-Agent: %s" %s`,
+	lumber.Debug(`[PULSE :: ACCESS] %s - [%s] %s %s %d - "User-Agent: %s" %s`,
 		req.RemoteAddr, req.Proto, req.Method, req.RequestURI,
 		status, req.Header.Get("User-Agent"), errMsg)
 

@@ -32,7 +32,7 @@ func TestMain(m *testing.M) {
 	for _, query := range queries {
 		_, err := influx.Query(query)
 		if err != nil {
-			fmt.Printf("Failed to QUERY/INITIALIZE - '%v' skipping tests\n", err)
+			fmt.Printf("Failed to QUERY/INITIALIZE - '%s' skipping tests\n", err)
 			os.Exit(0)
 		}
 	}

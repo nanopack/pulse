@@ -17,6 +17,7 @@ Usage:
 
 Flags:
   -a, --aggregate-interval int         Interval at which stats are aggregated (default 15)
+  -b, --beat-interval int              Heartbeat frequency (seconds) (default 30)
   -c, --config-file string             Config file location for server
   -C, --cors-allow string              Sets the 'Access-Control-Allow-Origin' header (default "*")
   -H, --http-listen-address string     Http listen address (default "127.0.0.1:8080")
@@ -50,7 +51,8 @@ Flags:
   "token": "secret",
   "poll-interval": 60,
   "aggregate-interval": 15,
-  "retention": 1
+  "beat-interval": 30,
+  "retention": 12
 }
 ```
 
@@ -150,8 +152,6 @@ The TCP api used to communicate between the pulse server and a relay is simple a
 Contributions to the pulse project are welcome and encouraged. Pulse is a [Nanobox](https://nanobox.io) project and contributions should follow the [Nanobox Contribution Process & Guidelines](https://docs.nanobox.io/contributing/).
 
 #### TODO
-- Ensure conn.Read() can handle network partitions
-- Tests
 
 ## Licence
 

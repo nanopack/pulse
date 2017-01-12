@@ -30,7 +30,7 @@ func TestMain(m *testing.M) {
 	viper.SetDefault("kapacitor-address", "http://172.28.128.4:9092")
 	err := kapacitor.Init()
 	if err != nil {
-		fmt.Printf("Failed to init - '%v' skipping tests\n", err)
+		fmt.Printf("Failed to init - '%s' skipping tests\n", err)
 		os.Exit(0)
 	}
 
@@ -48,7 +48,7 @@ func TestCreateUpdateTask(t *testing.T) {
 	}
 	err := kapacitor.SetTask(task)
 	if err != nil {
-		t.Errorf("Failed to add task - %v", err)
+		t.Errorf("Failed to add task - %s", err)
 	}
 
 	// to make work with repo update from 4767348... TO 3003b83...
@@ -56,13 +56,13 @@ func TestCreateUpdateTask(t *testing.T) {
 	task.Status = "disabled"
 	err = kapacitor.SetTask(task)
 	if err != nil {
-		t.Errorf("Failed to update task - %v", err)
+		t.Errorf("Failed to update task - %s", err)
 	}
 
 	task.Status = ""
 	err = kapacitor.SetTask(task)
 	if err != nil {
-		t.Errorf("Failed to test task status blank - %v", err)
+		t.Errorf("Failed to test task status blank - %s", err)
 	}
 
 	task.Status = "bad"
@@ -74,19 +74,19 @@ func TestCreateUpdateTask(t *testing.T) {
 	task.Type = "stream"
 	err = kapacitor.SetTask(task)
 	if err == nil {
-		t.Errorf("Failed to fail add stream task - %v", err)
+		t.Errorf("Failed to fail add stream task - %s", err)
 	}
 
 	task.Type = "bad"
 	err = kapacitor.SetTask(task)
 	if err == nil {
-		t.Errorf("Failed to fail add bad task type - %v", err)
+		t.Errorf("Failed to fail add bad task type - %s", err)
 	}
 }
 
 func TestDeleteTask(t *testing.T) {
 	err := kapacitor.DeleteTask(stat)
 	if err != nil {
-		t.Errorf("Failed to delete task - %v", err)
+		t.Errorf("Failed to delete task - %s", err)
 	}
 }

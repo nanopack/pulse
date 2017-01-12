@@ -42,22 +42,22 @@ func NewPlexer() *Plexer {
 }
 
 func (plex *Plexer) AddBatcher(name string, observer BatchPublisher) {
-	lumber.Trace("[PULSE :: PLEXER] Add batcher: %v...", name)
+	lumber.Trace("[PULSE :: PLEXER] Add batcher: %s...", name)
 	plex.batch[name] = observer
 }
 
 func (plex *Plexer) RemoveBatcher(name string) {
-	lumber.Trace("[PULSE :: PLEXER] Remove batcher: %v...", name)
+	lumber.Trace("[PULSE :: PLEXER] Remove batcher: %s...", name)
 	delete(plex.batch, name)
 }
 
 func (plex *Plexer) AddObserver(name string, observer SinglePublisher) {
-	lumber.Trace("[PULSE :: PLEXER] Add observer: %v...", name)
+	lumber.Trace("[PULSE :: PLEXER] Add observer: %s...", name)
 	plex.single[name] = observer
 }
 
 func (plex *Plexer) RemoveObserver(name string) {
-	lumber.Trace("[PULSE :: PLEXER] Remove observer: %v...", name)
+	lumber.Trace("[PULSE :: PLEXER] Remove observer: %s...", name)
 	delete(plex.single, name)
 }
 

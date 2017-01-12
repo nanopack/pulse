@@ -18,7 +18,7 @@ import (
 var clientConn client.Client
 
 func Query(sql string) (*client.Response, error) {
-	lumber.Trace("[PULSE :: INFLUX] Querying influx: '%v'...", sql)
+	lumber.Trace("[PULSE :: INFLUX] Querying influx: '%s'...", sql)
 
 	c, err := influxClient()
 	if err != nil {

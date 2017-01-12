@@ -18,6 +18,7 @@ var (
 	UnableToIdentify   = errors.New("unable to identify with pulse")
 	ReservedName       = errors.New("cannot use - or : or , or _connected in your name")
 	DuplicateCollector = errors.New("cannot add a duplicate collector to the set")
+	beatInterval       = 30
 )
 
 type (
@@ -78,9 +79,9 @@ func (relay *Relay) readData() {
 // beat allows the detection and handling of stale tcp connections
 func (relay *Relay) beat() {
 	for {
-		time.Sleep(10 * time.Second)
+		time.Sleep(time.Duration(beatInterval) * time.Second)
 		// since we're always reading, lets set a timeout for the pong to come back in 1/2 beat time
-		relay.conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+		relay.conn.SetReadDeadline(time.Now().Add(time.Duration(beatInterval/2) * time.Second))
 		lumber.Trace("[PULSE :: RELAY] PULSE pinging...")
 		_, err := relay.conn.Write([]byte("ping\n"))
 		if err != nil {
@@ -181,6 +182,15 @@ func (relay *Relay) runLoop() {
 				// just an ack
 			case "pong":
 				lumber.Trace("[PULSE :: RELAY] PONG: %v", split)
+			case "beat":
+				lumber.Trace("[PULSE :: RELAY] BEAT: %v", split)
+				if len(split) != 2 {
+					continue
+				}
+				num, err := strconv.Atoi(split[1])
+				if err == nil {
+					beatInterval = num
+				}
 			case "get":
 				if len(split) != 2 {
 					continue

@@ -53,7 +53,7 @@ func Init() error {
 		InsecureSkipVerify: true, // todo: maybe set back to `viper.GetBool("insecure")`
 	})
 	if err != nil {
-		return fmt.Errorf("Failed to create new client! - %v", err)
+		return fmt.Errorf("Failed to create new client! - %s", err)
 	}
 	_, _, err = cli.Ping()
 	return err
@@ -72,7 +72,7 @@ func SetTask(task Task) error {
 	case "STREAM":
 		Type = client.StreamTask
 	default:
-		return fmt.Errorf("Bad task type - '%v'", task.Type)
+		return fmt.Errorf("Bad task type - '%s'", task.Type)
 	}
 
 	DBRPs[0].Database = task.Database
@@ -88,7 +88,7 @@ func SetTask(task Task) error {
 		// default to disabled
 		Status = client.Disabled
 	default:
-		return fmt.Errorf("Bad task status - '%v'", task.Status)
+		return fmt.Errorf("Bad task status - '%s'", task.Status)
 	}
 
 	var err error
@@ -115,7 +115,7 @@ func SetTask(task Task) error {
 		lumber.Trace("Task Updated")
 	}
 	if err != nil {
-		return fmt.Errorf("Failed to create task - %v", err)
+		return fmt.Errorf("Failed to create task - %s", err)
 	}
 
 	return nil
@@ -125,7 +125,7 @@ func SetTask(task Task) error {
 func DeleteTask(id string) error {
 	err := cli.DeleteTask(cli.TaskLink(id))
 	if err != nil {
-		err = fmt.Errorf("Failed to delete task - %v", err)
+		err = fmt.Errorf("Failed to delete task - %s", err)
 	}
 
 	return err
@@ -176,7 +176,7 @@ func genLambda(alerts map[string]string) string {
 func genWhere(wheres map[string]string) string {
 	w := []string{}
 	for k, v := range wheres {
-		w = append(w, fmt.Sprintf("\"%v\" = '%v'", k, v))
+		w = append(w, fmt.Sprintf("\"%s\" = '%s'", k, v))
 	}
 	return strings.Join(w, " AND ")
 }

@@ -4,11 +4,13 @@ package server
 
 import (
 	"errors"
+	"fmt"
 	"net"
 	"strings"
 	"time"
 
 	"github.com/jcelliott/lumber"
+	"github.com/spf13/viper"
 
 	"github.com/nanopack/pulse/plexer"
 )
@@ -67,7 +69,7 @@ func readData(conn net.Conn, dataChan chan string, errChan chan error) {
 		// loop through the connection stream, appending tmp to data
 		for {
 			// readDeadline 2x as long as heartbeat
-			conn.SetReadDeadline(time.Now().Add(20 * time.Second))
+			conn.SetReadDeadline(time.Now().Add(time.Duration(viper.GetInt("beat-interval")*2) * time.Second))
 
 			// read to the tmp var
 			n, err := conn.Read(tmp)
@@ -128,6 +130,9 @@ func handleConnection(conn net.Conn) {
 
 	clients[id] = &client{conn: conn}
 	conn.Write([]byte("ok\n"))
+
+	// update client with configured beat-interval
+	conn.Write([]byte(fmt.Sprintf("beat %d\n", viper.GetInt("beat-interval"))))
 
 	// now handle commands and data
 	for {
