@@ -1,3 +1,11 @@
+## v0.2.0 (Jan 30, 2017)
+
+BUG FIXES:
+  - Resolve connection timeout issue (for real this time)
+
+IMPROVEMENTS:
+  - Handle errors rather than panic
+
 ## v0.1.0 (Jan 3, 2017)
 
 BUG FIXES:
