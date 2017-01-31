@@ -18,6 +18,7 @@ var (
 	UnableToIdentify   = errors.New("unable to identify with pulse")
 	ReservedName       = errors.New("cannot use - or : or , or _connected in your name")
 	DuplicateCollector = errors.New("cannot add a duplicate collector to the set")
+	beatInterval       = 30
 )
 
 type (
@@ -40,6 +41,7 @@ type (
 )
 
 func (relay *Relay) readData() {
+	zero := time.Time{}
 	for {
 		// make a temporary bytes var to read from the connection
 		tmp := make([]byte, 128)
@@ -64,6 +66,8 @@ func (relay *Relay) readData() {
 			}
 		}
 
+		relay.conn.SetReadDeadline(zero)
+
 		// return strings.TrimSuffix(string(data), "\n"), nil
 		datas := strings.Split(strings.TrimSuffix(string(data), "\n"), "\n")
 		for i := range datas {
@@ -72,9 +76,26 @@ func (relay *Relay) readData() {
 	}
 }
 
+// beat allows the detection and handling of stale tcp connections
+func (relay *Relay) beat() {
+	for {
+		time.Sleep(time.Duration(beatInterval) * time.Second)
+		// since we're always reading, lets set a timeout for the pong to come back in 1/2 beat time
+		relay.conn.SetReadDeadline(time.Now().Add(time.Duration(beatInterval/2) * time.Second))
+		lumber.Trace("[PULSE :: RELAY] PULSE pinging...")
+		_, err := relay.conn.Write([]byte("ping\n"))
+		if err != nil {
+			lumber.Trace("[PULSE :: RELAY] PULSE ping failed - %s", err)
+			relay.errChan <- err
+			return
+		}
+		lumber.Trace("[PULSE :: RELAY] PULSE pinged!")
+	}
+}
+
 // establishConnection establishes a connection and id's with the server
 func (relay *Relay) establishConnection() error {
-	conn, err := net.Dial("tcp", relay.hostAddr)
+	conn, err := net.DialTimeout("tcp", relay.hostAddr, 10*time.Second)
 	if err != nil {
 		return err
 	}
@@ -90,6 +111,9 @@ func (relay *Relay) establishConnection() error {
 
 	// start data reader
 	go relay.readData()
+
+	// start heartbeat
+	go relay.beat()
 
 	var line string
 
@@ -134,14 +158,15 @@ func (relay *Relay) runLoop() {
 	for {
 		select {
 		case err := <-relay.errChan:
-			lumber.Error("[PULSE :: RELAY] Disconnected from host %v!", relay.hostAddr)
+			lumber.Error("[PULSE :: RELAY] Disconnected from host %s!", relay.hostAddr)
+			relay.conn.Close()
 			// retry indefinitely
 			for {
 				if err = relay.establishConnection(); err == nil {
-					lumber.Info("[PULSE :: RELAY] Reconnected to host %v!", relay.hostAddr)
+					lumber.Info("[PULSE :: RELAY] Reconnected to host %s!", relay.hostAddr)
 					break
 				}
-				lumber.Debug("[PULSE :: RELAY] Reconnecting to host %v...  Fail!", relay.hostAddr)
+				lumber.Debug("[PULSE :: RELAY] Reconnecting to host %s...  Fail!", relay.hostAddr)
 				<-time.After(5 * time.Second)
 			}
 			// we won't have anything in 'line' so continue
@@ -153,18 +178,30 @@ func (relay *Relay) runLoop() {
 			cmd := split[0]
 			switch cmd {
 			case "ok":
-				lumber.Trace("[PULSE :: RELAY] OK: %v", split)
+				lumber.Trace("[PULSE :: RELAY] OK: %s", split)
 				// just an ack
+			case "pong":
+				lumber.Trace("[PULSE :: RELAY] PONG: %s", split)
+			case "beat":
+				lumber.Trace("[PULSE :: RELAY] BEAT: %s", split)
+				if len(split) != 2 {
+					continue
+				}
+				num, err := strconv.Atoi(split[1])
+				if err == nil {
+					beatInterval = num
+				}
 			case "get":
 				if len(split) != 2 {
 					continue
 				}
-				lumber.Trace("[PULSE :: RELAY] GET: %v", split)
+				lumber.Trace("[PULSE :: RELAY] GET: %s", split)
 				stats := strings.Split(split[1], ",")
 				results := make([]string, 0)
 				for _, stat := range stats {
 					tagCollector, ok := relay.collectors[stat]
 					if !ok {
+						lumber.Trace("[PULSE :: RELAY] stat %s !ok", stat)
 						continue
 					}
 					for name, value := range tagCollector.collector.Collect() {
@@ -177,11 +214,14 @@ func (relay *Relay) runLoop() {
 				}
 				if len(results) > 0 {
 					response := fmt.Sprintf("got %s\n", strings.Join(results, ","))
-					relay.conn.Write([]byte(response))
+					_, err := relay.conn.Write([]byte(response))
+					if err != nil {
+						lumber.Trace("[PULSE :: RELAY] GET response write error - %s", err)
+					}
 				}
 			default:
-				lumber.Trace("[PULSE :: RELAY] BAD: %v", split)
-				relay.conn.Write([]byte("unknown command\n"))
+				lumber.Trace("[PULSE :: RELAY] BAD: %s", split)
+				// causes network spam if we write anything to connection
 			}
 		}
 	}
@@ -218,7 +258,7 @@ func (relay *Relay) AddCollector(name string, tags []string, collector Collector
 		return DuplicateCollector
 	}
 	if _, err := relay.conn.Write([]byte(fmt.Sprintf("add %s:%s\n", name, strings.Join(tags, ",")))); err != nil {
-		lumber.Trace("[PULSE :: RELAY] Failed to write!")
+		lumber.Trace("[PULSE :: RELAY] Failed to add collector to server - %s", err)
 		return err
 	}
 
@@ -235,7 +275,9 @@ func (relay *Relay) RemoveCollector(name string) {
 		// todo: lock
 		delete(relay.collectors, name)
 		lumber.Trace("[PULSE :: RELAY] Removed '%s' as collector.", name)
-		relay.conn.Write([]byte(fmt.Sprintf("remove %v\n", name)))
+		if _, err := relay.conn.Write([]byte(fmt.Sprintf("remove %s\n", name))); err != nil {
+			lumber.Trace("[PULSE :: RELAY] Failed to remove collector from server - %s", err)
+		}
 	}
 }
 

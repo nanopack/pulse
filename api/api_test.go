@@ -174,7 +174,7 @@ func rest(method, route, data string) ([]byte, error) {
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to %v %v - %v", method, route, err)
+		return nil, fmt.Errorf("Unable to %s %s - %s", method, route, err)
 	}
 	defer res.Body.Close()
 

@@ -47,7 +47,7 @@ func main() {
   // register a new client
   relay, err := pulse.NewRelay(address, "lester.tester")
   if err != nil {
-    fmt.Printf("Unable to connect to pulse server %v\n", err)
+    fmt.Printf("Unable to connect to pulse server %s\n", err)
     return
   }
   defer relay.Close()

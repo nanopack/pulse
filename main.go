@@ -60,6 +60,7 @@ var (
 	insecure          = true
 	token             = "secret"
 	pollInterval      = 60
+	beatInterval      = 30 // heartbeat frequency (seconds)
 	aggregateInterval = 15
 	retention         = 1
 
@@ -114,6 +115,8 @@ func init() {
 	viper.BindPFlag("aggregate-interval", Pulse.Flags().Lookup("aggregate-interval"))
 	Pulse.Flags().IntP("retention", "r", retention, "Number of weeks to store aggregated stats")
 	viper.BindPFlag("retention", Pulse.Flags().Lookup("retention"))
+	Pulse.Flags().IntP("beat-interval", "b", beatInterval, "Heartbeat frequency (seconds)")
+	viper.BindPFlag("beat-interval", Pulse.Flags().Lookup("beat-interval"))
 
 	Pulse.Flags().StringVarP(&configFile, "config-file", "c", configFile, "Config file location for server")
 	Pulse.Flags().BoolVarP(&version, "version", "v", version, "Print version info and exit")
@@ -140,7 +143,7 @@ func readConfig(ccmd *cobra.Command, args []string) error {
 		viper.SetConfigFile(configFile)
 		err := viper.ReadInConfig()
 		if err != nil {
-			return fmt.Errorf("Failed to read config - %v", err)
+			return fmt.Errorf("Failed to read config - %s", err)
 		}
 	}
 
@@ -148,6 +151,12 @@ func readConfig(ccmd *cobra.Command, args []string) error {
 	if viper.GetInt("retention") < 1 {
 		fmt.Println("Bad value for retention, resetting to 1")
 		viper.Set("retention", 1)
+	}
+
+	// validate beat-interval
+	if viper.GetInt("beat-interval") < 1 {
+		fmt.Println("Bad value for beat-interval, resetting to 30")
+		viper.Set("retention", 30)
 	}
 
 	return nil
@@ -170,7 +179,7 @@ func startPulse(ccmd *cobra.Command, args []string) error {
 	if viper.GetString("mist-address") != "" {
 		mist, err := mist.New(viper.GetString("mist-address"), viper.GetString("mist-token"))
 		if err != nil {
-			return fmt.Errorf("Mist failed to start - %s", err.Error())
+			return fmt.Errorf("Mist failed to start - %s", err)
 		}
 		plex.AddObserver("mist", mist.Publish)
 		defer mist.Close()
@@ -180,7 +189,7 @@ func startPulse(ccmd *cobra.Command, args []string) error {
 
 	err := pulse.Listen(viper.GetString("server-listen-address"), plex.Publish)
 	if err != nil {
-		return fmt.Errorf("Pulse failed to start - %s", err.Error())
+		return fmt.Errorf("Pulse failed to start - %s", err)
 	}
 	// begin polling the connected servers
 	pollSec := viper.GetInt("poll-interval")
@@ -198,7 +207,7 @@ func startPulse(ccmd *cobra.Command, args []string) error {
 	for _, query := range queries {
 		_, err := influx.Query(query)
 		if err != nil {
-			return fmt.Errorf("Failed to query influx - %s", err.Error())
+			return fmt.Errorf("Failed to query influx - %s", err)
 		}
 	}
 
@@ -207,13 +216,13 @@ func startPulse(ccmd *cobra.Command, args []string) error {
 	if viper.GetString("kapacitor-address") != "" {
 		err := kapacitor.Init()
 		if err != nil {
-			return fmt.Errorf("Kapacitor failed to start - %s", err.Error())
+			return fmt.Errorf("Kapacitor failed to start - %s", err)
 		}
 	}
 
 	err = api.Start()
 	if err != nil {
-		return fmt.Errorf("Api failed to start - %s", err.Error())
+		return fmt.Errorf("Api failed to start - %s", err)
 	}
 
 	return nil
