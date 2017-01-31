@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jcelliott/lumber"
 	"github.com/spf13/viper"
 
 	"github.com/nanopack/pulse/influx"
@@ -30,8 +31,9 @@ type (
 func keysRequest(res http.ResponseWriter, req *http.Request) {
 	cols, err := influx.Query("SHOW FIELD KEYS FROM one_day./.*/") // or show measurements? - aggregate
 	if err != nil {
-		// todo: don't panic, we can handle this
-		panic(err)
+		lumber.Error("Failed to get field keys from one_day./.*/ - %s", err.Error())
+		writeBody(apiError{ErrorString: err.Error()}, res, http.StatusInternalServerError, req)
+		return
 	}
 
 	columns := make(map[string]struct{})
@@ -55,7 +57,9 @@ func keysRequest(res http.ResponseWriter, req *http.Request) {
 func tagsRequest(res http.ResponseWriter, req *http.Request) {
 	groupBy, err := influx.Query("SHOW TAG KEYS FROM one_day./.*/")
 	if err != nil {
-		panic(err)
+		lumber.Error("Failed to get tag keys from one_day./.*/ - %s", err.Error())
+		writeBody(apiError{ErrorString: err.Error()}, res, http.StatusInternalServerError, req)
+		return
 	}
 
 	columns := make(map[string]struct{})

@@ -46,9 +46,9 @@ func Listen(address string, publisher Publisher) error {
 			conn, err := serverSocket.Accept()
 			if err != nil {
 				// if the connection stops working we should
-				// panic so we never are in a state where we thing
-				// its accepting and it isnt
-				panic(err)
+				// return so we never are in a state where we think
+				// it's accepting and it isnt
+				lumber.Error("Failed to accept TCP connection - %s", err.Error())
 			}
 
 			// handle each connection individually (non-blocking)
@@ -151,17 +151,17 @@ func handleConnection(conn net.Conn) {
 
 			split := strings.SplitN(line, " ", 2)
 			if len(split) != 2 {
-				lumber.Trace("[PULSE :: SERVER] Not enough data: %v", split)
+				lumber.Trace("[PULSE :: SERVER] Not enough data: %s", split)
 				continue
 			}
 
 			cmd := split[0]
 			switch cmd {
 			case "ok":
-				lumber.Trace("[PULSE :: SERVER] OK: %v", split)
+				lumber.Trace("[PULSE :: SERVER] OK: %s", split)
 				// just an ack
 			case "got":
-				lumber.Trace("[PULSE :: SERVER] GOT: %v", split)
+				lumber.Trace("[PULSE :: SERVER] GOT: %s", split)
 				stats := strings.Split(split[1], ",")
 
 				metric := plexer.MessageSet{
@@ -195,7 +195,7 @@ func handleConnection(conn net.Conn) {
 				}
 				publish(metric)
 			case "add":
-				lumber.Trace("[PULSE :: SERVER] ADD: %v", split)
+				lumber.Trace("[PULSE :: SERVER] ADD: %s", split)
 				if !strings.Contains(split[1], ":") {
 					clients[id].add(split[1], []string{})
 					continue
@@ -208,15 +208,15 @@ func handleConnection(conn net.Conn) {
 				clients[id].add(split[0], tags)
 
 			case "remove":
-				lumber.Trace("[PULSE :: SERVER] REMOVE: %v", split)
+				lumber.Trace("[PULSE :: SERVER] REMOVE: %s", split)
 				clients[id].remove(split[1])
 				// record that the remote does not have a stat available
 			case "close":
-				lumber.Trace("[PULSE :: SERVER] CLOSE: %v", split)
+				lumber.Trace("[PULSE :: SERVER] CLOSE: %s", split)
 				// clean shutoff of the connection
 				return
 			default:
-				lumber.Trace("[PULSE :: SERVER] BAD: %v", split)
+				lumber.Trace("[PULSE :: SERVER] BAD: %s", split)
 				// don't spam network
 			}
 		case err := <-errChan:

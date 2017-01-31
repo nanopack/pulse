@@ -178,12 +178,12 @@ func (relay *Relay) runLoop() {
 			cmd := split[0]
 			switch cmd {
 			case "ok":
-				lumber.Trace("[PULSE :: RELAY] OK: %v", split)
+				lumber.Trace("[PULSE :: RELAY] OK: %s", split)
 				// just an ack
 			case "pong":
-				lumber.Trace("[PULSE :: RELAY] PONG: %v", split)
+				lumber.Trace("[PULSE :: RELAY] PONG: %s", split)
 			case "beat":
-				lumber.Trace("[PULSE :: RELAY] BEAT: %v", split)
+				lumber.Trace("[PULSE :: RELAY] BEAT: %s", split)
 				if len(split) != 2 {
 					continue
 				}
@@ -195,7 +195,7 @@ func (relay *Relay) runLoop() {
 				if len(split) != 2 {
 					continue
 				}
-				lumber.Trace("[PULSE :: RELAY] GET: %v", split)
+				lumber.Trace("[PULSE :: RELAY] GET: %s", split)
 				stats := strings.Split(split[1], ",")
 				results := make([]string, 0)
 				for _, stat := range stats {
@@ -220,7 +220,7 @@ func (relay *Relay) runLoop() {
 					}
 				}
 			default:
-				lumber.Trace("[PULSE :: RELAY] BAD: %v", split)
+				lumber.Trace("[PULSE :: RELAY] BAD: %s", split)
 				// causes network spam if we write anything to connection
 			}
 		}

@@ -36,8 +36,10 @@ func TestMain(m *testing.M) {
 	// time.Sleep(time.Second)
 
 	if err != nil {
-		panic(fmt.Sprintf("unable to listen %s", err))
+		fmt.Printf("unable to listen - %s\n", err)
+		return
 	}
+
 	rtn := m.Run()
 	os.Exit(rtn)
 }
