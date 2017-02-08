@@ -156,7 +156,7 @@ func readConfig(ccmd *cobra.Command, args []string) error {
 	// validate beat-interval
 	if viper.GetInt("beat-interval") < 1 {
 		fmt.Println("Bad value for beat-interval, resetting to 30")
-		viper.Set("retention", 30)
+		viper.Set("beat-interval", 30)
 	}
 
 	return nil
