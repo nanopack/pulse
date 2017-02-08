@@ -1,3 +1,13 @@
+## v0.2.1 (Feb 8, 2017)
+
+BUG FIXES:
+  - #10 Resolves client multiple heartbeats
+  - #10 Resolves server's client-awareness issues
+  - Fixed `beat-interval` default
+
+IMPROVEMENTS:
+  - Added dirty commit identifier
+
 ## v0.2.0 (Jan 30, 2017)
 
 BUG FIXES:
