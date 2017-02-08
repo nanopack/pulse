@@ -39,8 +39,7 @@ func Listen(address string, publisher Publisher) error {
 
 	lumber.Info("[PULSE :: SERVER] Listening at %s...", address)
 
-	go func() {
-		defer serverSocket.Close()
+	go func(serverSocket net.Listener) {
 		// Continually listen for any incoming connections.
 		for {
 			conn, err := serverSocket.Accept()
@@ -49,12 +48,14 @@ func Listen(address string, publisher Publisher) error {
 				// return so we never are in a state where we think
 				// it's accepting and it isnt
 				lumber.Error("Failed to accept TCP connection - %s", err.Error())
+				continue
 			}
 
 			// handle each connection individually (non-blocking)
 			go handleConnection(conn)
 		}
-	}()
+	}(serverSocket)
+
 	return nil
 }
 

@@ -112,9 +112,6 @@ func (relay *Relay) establishConnection() error {
 	// start data reader
 	go relay.readData()
 
-	// start heartbeat
-	go relay.beat()
-
 	var line string
 
 	select {
@@ -149,6 +146,9 @@ func NewRelay(address, id string) (*Relay, error) {
 	}
 
 	go newRelay.runLoop()
+
+	// start heartbeat
+	go newRelay.beat()
 
 	return newRelay, nil
 }

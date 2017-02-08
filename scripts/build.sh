@@ -5,8 +5,13 @@ set -e
 MD5=$(which md5 || which md5sum )
 
 # for versioning
+getDirtyCommit() {
+  [[ $(git status 2> /dev/null | tail -n1) != "nothing to commit (working directory clean)" ]] && echo -n "*"
+}
+
+# for versioning
 getCurrCommit() {
-  echo `git rev-parse --short HEAD | tr -d "[ \r\n\']"`
+  echo `git rev-parse --short HEAD | tr -d "[ \r\n\']"`"$(getDirtyCommit)"
 }
 
 # for versioning
