@@ -29,8 +29,25 @@ func setAlert(res http.ResponseWriter, req *http.Request) {
 	if alert.Duration == "" {
 		alert.Duration = "5m"
 	}
+	op := ">"
+	switch alert.Operator {
+	case "eq":
+		op = "=="
+	case "ne":
+		op = "!="
+	case "lt":
+		op = "<"
+	case "le":
+		op = "<="
+	case "gt":
+		op = ">"
+	case "ge":
+		op = ">="
+	default:
+		op = ">"
+	}
 
-	lambda := map[string]string{alert.Level: fmt.Sprintf("\"mean_%s\" > %d", alert.Metric, alert.Threshold)}
+	lambda := map[string]string{alert.Level: fmt.Sprintf("\"mean_%s\" %s %s", alert.Metric, op, alert.Threshold)}
 
 	// generate id to set for task/return to user
 	alert.GenId()
@@ -65,4 +82,28 @@ func deleteAlert(res http.ResponseWriter, req *http.Request) {
 	}
 
 	writeBody(apiMsg{"Success"}, res, http.StatusOK, req)
+}
+
+// get all tasks
+func getAlerts(res http.ResponseWriter, req *http.Request) {
+	tasks, err := kapacitor.ListTasks()
+	if err != nil {
+		writeBody(apiError{ErrorString: err.Error()}, res, http.StatusBadRequest, req)
+		return
+	}
+
+	writeBody(tasks, res, http.StatusOK, req)
+}
+
+// get a task
+func getAlert(res http.ResponseWriter, req *http.Request) {
+	taskId := req.URL.Query().Get(":id")
+
+	task, err := kapacitor.ListTask(taskId)
+	if err != nil {
+		writeBody(apiError{ErrorString: err.Error()}, res, http.StatusBadRequest, req)
+		return
+	}
+
+	writeBody(task, res, http.StatusOK, req)
 }
