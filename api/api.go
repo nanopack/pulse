@@ -80,6 +80,8 @@ func registerRoutes() (*pat.Router, error) {
 		router.Post("/alerts", doCors(setAlert))
 		router.Put("/alerts", doCors(setAlert))
 		router.Delete("/alerts/{id}", doCors(deleteAlert))
+		router.Get("/alerts/{id}", doCors(getAlert))
+		router.Get("/alerts", doCors(getAlerts))
 	}
 
 	return router, nil

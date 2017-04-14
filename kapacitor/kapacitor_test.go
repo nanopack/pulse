@@ -19,15 +19,14 @@ var (
 	where       = map[string]string{"region": "home", "host": ""}
 	period      = "3m"
 	every       = "30s"
-	threshold   = 0
 	post        = "alerts.log"
 
 	alerts = map[string]string{"info": "\"mean_cpu_used\" > 0"}
 )
 
 func TestMain(m *testing.M) {
-	// viper.SetDefault("kapacitor-address", "http://localhost:9092")
-	viper.SetDefault("kapacitor-address", "http://172.28.128.4:9092")
+	viper.SetDefault("kapacitor-address", "http://localhost:9092")
+	// viper.SetDefault("kapacitor-address", "http://172.28.128.4:9092")
 	err := kapacitor.Init()
 	if err != nil {
 		fmt.Printf("Failed to init - '%s' skipping tests\n", err)

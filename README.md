@@ -1,5 +1,6 @@
 [![pulse logo](http://nano-assets.gopagoda.io/readme-headers/pulse.png)](http://nanobox.io/open-source#pulse)  
 [![Build Status](https://travis-ci.org/nanopack/pulse.svg)](https://travis-ci.org/nanopack/pulse)
+[![GoDoc](https://godoc.org/github.com/nanopack/pulse?status.svg)](https://godoc.org/github.com/nanopack/pulse)
 
 # Pulse
 

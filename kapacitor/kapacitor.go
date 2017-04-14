@@ -34,7 +34,8 @@ type Alert struct {
 	Tags      map[string]string `json:"tags,omitempty"`  // populates the WHERE
 	Metric    string            `json:"metric"`          // the stat to track
 	Level     string            `json:"level,omitempty"` // the alert level (info, warn, crit)
-	Threshold int               `json:"threshold"`       // limit that alert is triggered
+	Operator  string            `json:"operator"`        // comparison operator used (bash style - gt, lt, le, ge, eq, ne)
+	Threshold string            `json:"threshold"`       // limit that alert is triggered
 	Duration  string            `json:"duration"`        // how far back to average (5m)
 	Post      string            `json:"post"`            // api to hit when alert is triggered
 }
@@ -129,6 +130,26 @@ func DeleteTask(id string) error {
 	}
 
 	return err
+}
+
+// ListTask lists a kapacitor task
+func ListTask(id string) (client.Task, error) {
+	task, err := cli.ListTasks(&client.ListTasksOptions{Pattern: id})
+	if err != nil {
+		return client.Task{}, fmt.Errorf("Failed to list task - %s", err)
+	}
+
+	return task[0], nil
+}
+
+// ListTasks lists all kapacitor task
+func ListTasks() ([]client.Task, error) {
+	tasks, err := cli.ListTasks(nil)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to list tasks - %s", err)
+	}
+
+	return tasks, nil
 }
 
 // GenBatchTick generates a simple batch type TICKscript

@@ -1,3 +1,11 @@
+## v0.2.2 (Apr 14, 2017)
+
+IMPROVEMENTS:
+  - Allow integers or floats for threshold
+  - Allow different comparison operators
+  - Added routes for listing single and all tasks
+  - Updated alerts API docs
+
 ## v0.2.1 (Feb 8, 2017)
 
 BUG FIXES:
