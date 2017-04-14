@@ -119,7 +119,7 @@ func TestAddAlert(t *testing.T) {
 	  "tags": {"host":"abcd"},
 	  "metric": "cpu_used",
 	  "level": "crit",
-	  "threshold": 80,
+	  "threshold": "80",
 	  "duration": "30s",
 	  "post": "http://127.0.0.1/alert"
 	}`
