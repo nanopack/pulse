@@ -121,8 +121,13 @@ func writeBody(v interface{}, rw http.ResponseWriter, status int, req *http.Requ
 		errMsg = msg["error"]
 	}
 
+	remoteAddr := req.RemoteAddr
+	if fwdFor := req.Header.Get("X-Forwarded-For"); len(fwdFor) > 0 {
+		remoteAddr = fwdFor
+	}
+
 	lumber.Debug(`[PULSE :: ACCESS] %s - [%s] %s %s %d - "User-Agent: %s" %s`,
-		req.RemoteAddr, req.Proto, req.Method, req.RequestURI,
+		remoteAddr, req.Proto, req.Method, req.RequestURI,
 		status, req.Header.Get("User-Agent"), errMsg)
 
 	rw.Header().Set("Content-Type", "application/json")
