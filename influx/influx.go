@@ -121,21 +121,21 @@ func KeepContinuousQueriesUpToDate() error {
 		cols, err := c.Query(client.NewQuery("SHOW FIELD KEYS", "statistics", "s")) // equivalent to including `FROM one_day./.*/`
 		if err != nil {
 			// todo: return?
-			lumber.Error("Failed to show field keys from statistics - %s")
+			lumber.Error("Failed to show field keys from statistics - %s", err.Error())
 		}
 
 		// check tags
 		groupBy, err := c.Query(client.NewQuery("SHOW TAG KEYS", "statistics", "s"))
 		if err != nil {
 			// todo: return?
-			lumber.Error("Failed to show tag keys from statistics - %s")
+			lumber.Error("Failed to show tag keys from statistics - %s", err.Error())
 		}
 
 		// get continuous queries
 		cont, err := c.Query(client.NewQuery("SHOW CONTINUOUS QUERIES", "statistics", "s"))
 		if err != nil {
 			// todo: return?
-			lumber.Error("Failed to show continuous queries from statistics - %s")
+			lumber.Error("Failed to show continuous queries from statistics - %s", err.Error())
 		}
 
 		// get current query
