@@ -1,3 +1,8 @@
+## v0.2.3 (Jun 20, 2017)
+
+IMPROVEMENTS:
+  - Minor improvements to logging
+
 ## v0.2.2 (Apr 14, 2017)
 
 IMPROVEMENTS:
