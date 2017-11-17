@@ -120,22 +120,25 @@ func KeepContinuousQueriesUpToDate() error {
 		// or do a `show measurements` and skip 'aggregate' or `SHOW MEASUREMENTS WITH MEASUREMENT =~ /([^a][^g][^g][^r][^e][^g][^a][^t][^e]).*/`
 		cols, err := c.Query(client.NewQuery("SHOW FIELD KEYS", "statistics", "s")) // equivalent to including `FROM one_day./.*/`
 		if err != nil {
-			// todo: return?
 			lumber.Error("Failed to show field keys from statistics - %s", err.Error())
+			<-time.After(time.Minute)
+			continue
 		}
 
 		// check tags
 		groupBy, err := c.Query(client.NewQuery("SHOW TAG KEYS", "statistics", "s"))
 		if err != nil {
-			// todo: return?
 			lumber.Error("Failed to show tag keys from statistics - %s", err.Error())
+			<-time.After(time.Minute)
+			continue
 		}
 
 		// get continuous queries
 		cont, err := c.Query(client.NewQuery("SHOW CONTINUOUS QUERIES", "statistics", "s"))
 		if err != nil {
-			// todo: return?
 			lumber.Error("Failed to show continuous queries from statistics - %s", err.Error())
+			<-time.After(time.Minute)
+			continue
 		}
 
 		// get current query
