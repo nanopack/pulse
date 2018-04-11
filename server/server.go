@@ -156,6 +156,14 @@ func handleConnection(conn net.Conn) {
 				continue
 			}
 
+			// this alleviates an edge case where add is called on a client
+			// that doesn't exist.
+			// todo: actually reproduce with pulse relay.
+			if _, ok := clients[id]; !ok {
+				lumber.Error("[PULSE :: SERVER] No client found for: %s", id)
+				return
+			}
+
 			cmd := split[0]
 			switch cmd {
 			case "ok":
