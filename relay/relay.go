@@ -249,7 +249,8 @@ func (relay *Relay) Info() map[string]float64 {
 
 // AddCollector adds a collector to relay
 func (relay *Relay) AddCollector(name string, tags []string, collector Collector) error {
-	if name == "_connected" || strings.ContainsAny(name, ":,") {
+	// These characters are reserved in pulse and may not be used as part of an identifier.
+	if name == "_connected" || strings.ContainsAny(name, "-:,") {
 		lumber.Trace("[PULSE :: RELAY] Reserved name!")
 		return ReservedName
 	}
