@@ -17,6 +17,7 @@ import (
 )
 
 var apiAddr = "0.0.0.0:9898"
+var kap = true
 
 func TestMain(m *testing.M) {
 	viper.SetDefault("http-listen-address", apiAddr)
@@ -29,7 +30,11 @@ func TestMain(m *testing.M) {
 
 	// start api
 	go api.Start()
-	kapacitor.Init()
+	err := kapacitor.Init()
+	if err != nil {
+		fmt.Printf("Failed to init kapacitor - '%s' skipping related tests\n", err)
+		kap = false
+	}
 
 	time.Sleep(time.Second)
 
@@ -115,6 +120,10 @@ func TestGetDaily(t *testing.T) {
 }
 
 func TestAddAlert(t *testing.T) {
+	if !kap {
+		t.SkipNow()
+	}
+
 	alert := `{
 	  "tags": {"host":"abcd"},
 	  "metric": "cpu_used",
